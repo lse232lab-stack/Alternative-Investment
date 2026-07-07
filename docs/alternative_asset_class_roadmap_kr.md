@@ -18,13 +18,13 @@
 |---|---|---|---|
 | Real Estate | Office | 상세 모델 | NOI, DSCR, IRR, Equity Multiple, Exit Cap |
 | Infrastructure | Renewable Power | 상세 모델 | P50/P90, PPA Revenue, Merchant Revenue, DSCR, IRR |
-| Real Estate | Logistics | 템플릿 모델 | NOI, Occupancy, Rent Growth, Exit Cap |
-| Real Estate / Infra | Data Center | 템플릿 모델 | MW Capacity, Utilization, EBITDA Margin, CAPEX |
+| Real Estate | Logistics | 상세 모델 | NOI, Occupancy, Rent Growth, Renewal Spread, Exit Cap |
+| Real Estate / Infra | Data Center | 상세 모델 | MW Capacity, Utilization, Power Cost, EBITDA Margin, CAPEX |
 | Real Estate | Multifamily | 템플릿 모델 | Occupancy, Rent Growth, Turnover, Maintenance CAPEX |
 | Real Estate Operating Asset | Hotel | 템플릿 모델 | ADR, Occupancy, RevPAR, EBITDA Margin |
 | Infrastructure | Toll Road / PPP | 템플릿 모델 | Traffic, Toll Rate, Concession Life, DSCR |
-| Private Debt | Private Credit | 템플릿 모델 | Coupon, Default Rate, Recovery, Expected Loss |
-| Private Equity | Buyout | 템플릿 모델 | EBITDA Growth, Leverage, Exit Multiple, Deleveraging |
+| Private Debt | Private Credit | 상세 모델 | Coupon, Default Rate, Recovery, Expected Loss, Prepayment |
+| Private Equity | Buyout | 상세 모델 | EBITDA Growth, Leverage, Exit Multiple, Deleveraging |
 | Private Funds | Secondaries / NAV | 템플릿 모델 | NAV Discount, Distribution Yield, NAV Growth |
 
 ## 3. 공개자료 기반 대표 케이스 선정 방식
@@ -78,13 +78,13 @@ NAV 할인율, 분배금, NAV 성장률, unfunded commitment, vintage mix, liqui
 
 ## 5. 향후 개발 우선순위
 
-1. Logistics와 Data Center를 Office 수준의 상세 부동산 모델로 확장
+1. Logistics, Data Center, Private Credit, PE Buyout 상세 모델의 공개자료 기반 입력값을 더 정교화
 2. Private Credit 모델에 default/recovery sensitivity와 covenant checklist 추가
-3. PE Buyout 모델에 sources and uses, debt schedule, EBITDA bridge 추가
+3. PE Buyout 모델에 sources and uses, EBITDA bridge, debt tranche 구조 추가
 4. Secondaries 모델에 NAV haircut, unfunded commitment, distribution waterfall 추가
-5. 각 자산군별 공개자료 링크와 Source Tracker 고도화
-6. Excel export를 Office 외 자산군으로 확장
-7. Streamlit 화면에서 자산군별 입력 UI를 분리
+5. Hotel과 Toll Road / PPP를 상세 모델로 승격
+6. 각 자산군별 공개자료 링크와 Source Tracker 고도화
+7. Excel export를 Office 외 자산군으로 확장
 
 ## 6. 포트폴리오 설명 문장
 

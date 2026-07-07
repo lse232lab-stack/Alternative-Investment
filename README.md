@@ -22,19 +22,19 @@ Detailed engines:
 
 - Office acquisition underwriting
 - Renewable power infrastructure underwriting
+- Logistics warehouse underwriting
+- Data center underwriting
+- Private credit / direct lending portfolio underwriting
+- Private equity buyout / LBO underwriting
 
 Template engines:
 
-- Logistics
-- Data Center
 - Multifamily / Residential Rental
 - Hotel / Hospitality
 - Toll Road / Transportation PPP
-- Private Credit / Direct Lending
-- Private Equity Buyout
 - Secondaries / Fund NAV
 
-Each template includes:
+Each detailed model or template includes:
 
 - Public research case route
 - Key underwriting question

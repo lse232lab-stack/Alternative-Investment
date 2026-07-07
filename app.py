@@ -16,6 +16,17 @@ from underwriting_copilot.alternative_models import (
     underwrite_generic,
 )
 from underwriting_copilot.asset_router import asset_class_positioning, model_design_rows
+from underwriting_copilot.detailed_models import (
+    DataCenterAssumptions,
+    LBOAssumptions,
+    LogisticsAssumptions,
+    PrivateCreditAssumptions,
+    detailed_asset_classes,
+    underwrite_data_center,
+    underwrite_lbo,
+    underwrite_logistics,
+    underwrite_private_credit,
+)
 from underwriting_copilot.excel_export import export_excel
 from underwriting_copilot.infra_models import InfraAssumptions, infra_memo, underwrite_infra
 from underwriting_copilot.institution_lens import build_institution_views
@@ -57,6 +68,125 @@ with library_tab:
 
 with model_tab:
     st.subheader(asset_class)
+
+if asset_class in detailed_asset_classes():
+    with st.sidebar:
+        st.header("Detailed Model Assumptions")
+
+    if asset_class == "Logistics":
+        base = LogisticsAssumptions()
+        with st.sidebar:
+            acquisition_price = st.number_input("Acquisition Price", value=int(base.acquisition_price), step=5_000_000)
+            area = st.number_input("Net Leasable Area sqm", value=int(base.net_leasable_area_sqm), step=5_000)
+            occupancy = st.slider("Occupancy", 0.0, 1.0, base.occupancy_rate, 0.01)
+            rent = st.number_input("Rent / sqm / year", value=float(base.rent_per_sqm_year), step=5.0)
+            growth = st.slider("Market Rent Growth", 0.0, 0.12, base.market_rent_growth, 0.005)
+            renewal_spread = st.slider("Renewal Spread", -0.10, 0.30, base.renewal_spread, 0.01)
+            opex_ratio = st.slider("Opex Ratio", 0.0, 0.6, base.opex_ratio, 0.01)
+            ltv = st.slider("LTV", 0.0, 0.8, base.ltv, 0.01)
+            interest_rate = st.slider("Interest Rate", 0.0, 0.12, base.interest_rate, 0.005)
+            exit_cap = st.slider("Exit Cap", 0.025, 0.10, base.exit_cap_rate, 0.0025)
+        detailed_result = underwrite_logistics(
+            LogisticsAssumptions(
+                acquisition_price=float(acquisition_price),
+                net_leasable_area_sqm=float(area),
+                occupancy_rate=float(occupancy),
+                rent_per_sqm_year=float(rent),
+                market_rent_growth=float(growth),
+                renewal_spread=float(renewal_spread),
+                opex_ratio=float(opex_ratio),
+                ltv=float(ltv),
+                interest_rate=float(interest_rate),
+                exit_cap_rate=float(exit_cap),
+            )
+        )
+    elif asset_class == "Data Center":
+        base = DataCenterAssumptions()
+        with st.sidebar:
+            acquisition_price = st.number_input("Acquisition Price", value=int(base.acquisition_price), step=10_000_000)
+            critical_it_mw = st.number_input("Critical IT MW", value=float(base.critical_it_mw), step=2.0)
+            utilization = st.slider("Utilization", 0.0, 1.0, base.stabilized_utilization, 0.01)
+            rent_per_kw = st.number_input("Rent / kW / month", value=float(base.rent_per_kw_month), step=5.0)
+            rent_escalation = st.slider("Rent Escalation", 0.0, 0.08, base.rent_escalation, 0.005)
+            power_cost_pct = st.slider("Power Cost % Revenue", 0.0, 0.5, base.power_cost_pct_revenue, 0.01)
+            facility_opex_pct = st.slider("Facility Opex % Revenue", 0.0, 0.5, base.facility_opex_pct_revenue, 0.01)
+            ltv = st.slider("LTV", 0.0, 0.75, base.ltv, 0.01)
+            exit_multiple = st.slider("Exit EBITDA Multiple", 6.0, 25.0, base.exit_ebitda_multiple, 0.5)
+        detailed_result = underwrite_data_center(
+            DataCenterAssumptions(
+                acquisition_price=float(acquisition_price),
+                critical_it_mw=float(critical_it_mw),
+                stabilized_utilization=float(utilization),
+                rent_per_kw_month=float(rent_per_kw),
+                rent_escalation=float(rent_escalation),
+                power_cost_pct_revenue=float(power_cost_pct),
+                facility_opex_pct_revenue=float(facility_opex_pct),
+                ltv=float(ltv),
+                exit_ebitda_multiple=float(exit_multiple),
+            )
+        )
+    elif asset_class == "Private Credit / Direct Lending":
+        base = PrivateCreditAssumptions()
+        with st.sidebar:
+            principal = st.number_input("Portfolio Principal", value=int(base.portfolio_principal), step=5_000_000)
+            coupon = st.slider("Coupon Rate", 0.0, 0.20, base.coupon_rate, 0.005)
+            upfront_fee = st.slider("Upfront Fee", 0.0, 0.05, base.upfront_fee_rate, 0.005)
+            default_rate = st.slider("Annual Default Rate", 0.0, 0.12, base.annual_default_rate, 0.005)
+            recovery = st.slider("Recovery Rate", 0.0, 1.0, base.recovery_rate, 0.05)
+            prepayment = st.slider("Annual Prepayment Rate", 0.0, 0.30, base.annual_prepayment_rate, 0.01)
+            reinvestment = st.slider("Reinvestment Rate", 0.0, 1.0, base.reinvestment_rate, 0.05)
+        detailed_result = underwrite_private_credit(
+            PrivateCreditAssumptions(
+                portfolio_principal=float(principal),
+                coupon_rate=float(coupon),
+                upfront_fee_rate=float(upfront_fee),
+                annual_default_rate=float(default_rate),
+                recovery_rate=float(recovery),
+                annual_prepayment_rate=float(prepayment),
+                reinvestment_rate=float(reinvestment),
+            )
+        )
+    else:
+        base = LBOAssumptions()
+        with st.sidebar:
+            entry_ebitda = st.number_input("Entry EBITDA", value=int(base.entry_ebitda), step=5_000_000)
+            entry_multiple = st.slider("Entry Multiple", 4.0, 15.0, base.entry_multiple, 0.5)
+            debt_multiple = st.slider("Debt Multiple", 0.0, 8.0, base.debt_multiple, 0.25)
+            growth = st.slider("EBITDA Growth Proxy", 0.0, 0.15, base.revenue_growth, 0.005)
+            margin_expansion = st.slider("Margin Expansion", -0.02, 0.03, base.ebitda_margin_expansion, 0.005)
+            interest_rate = st.slider("Debt Interest Rate", 0.0, 0.15, base.interest_rate, 0.005)
+            cash_sweep = st.slider("Cash Sweep %", 0.0, 1.0, base.cash_sweep_pct, 0.05)
+            exit_multiple = st.slider("Exit Multiple", 4.0, 15.0, base.exit_multiple, 0.5)
+        detailed_result = underwrite_lbo(
+            LBOAssumptions(
+                entry_ebitda=float(entry_ebitda),
+                entry_multiple=float(entry_multiple),
+                debt_multiple=float(debt_multiple),
+                revenue_growth=float(growth),
+                ebitda_margin_expansion=float(margin_expansion),
+                interest_rate=float(interest_rate),
+                cash_sweep_pct=float(cash_sweep),
+                exit_multiple=float(exit_multiple),
+            )
+        )
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Levered IRR", f"{detailed_result.metrics['levered_irr']:.1%}")
+    metric_cols[1].metric("Equity Multiple", f"{detailed_result.metrics['equity_multiple']:.2f}x")
+    metric_cols[2].metric("NPV", f"{detailed_result.metrics['npv']:,.0f}")
+    metric_cols[3].metric("Equity Invested", f"{detailed_result.metrics['equity_invested']:,.0f}")
+
+    tab1, tab2, tab3 = st.tabs(["Cash Flow", "Debt / Credit", "Memo"])
+    with tab1:
+        st.dataframe(detailed_result.cash_flow, use_container_width=True)
+    with tab2:
+        if detailed_result.debt_schedule.empty:
+            st.info("This model is portfolio-credit oriented and does not use an acquisition debt schedule.")
+        else:
+            st.dataframe(detailed_result.debt_schedule, use_container_width=True)
+    with tab3:
+        st.markdown(detailed_result.memo)
+    st.stop()
 
 if asset_class not in {"Office", "Infrastructure - Renewable Power"}:
     template = next(item for item in asset_library if item.asset_class == asset_class)
