@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.streamlit/
+.venv/
+venv/
+env/
+
+# Generated outputs
+outputs/
+
+# Local notebooks and temporary files
+*.ipynb_checkpoints/
+*.tmp
+*.log
