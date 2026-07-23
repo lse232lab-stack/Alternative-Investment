@@ -51,6 +51,7 @@ button { color: inherit; }
 .result-count strong { color: var(--ink); font-family: Georgia, serif; font-size: 18px; }
 
 .workspace { min-height: 620px; height: calc(100vh - 213px); display: grid; grid-template-columns: minmax(310px, 360px) 1fr; position: relative; overflow: hidden; }
+.workspace.detail-open { grid-template-columns: minmax(300px, 340px) minmax(360px, 1fr) minmax(380px, 450px); }
 .asset-panel { min-width: 0; min-height: 0; height: 100%; overflow: hidden; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; z-index: 4; }
 .panel-heading { padding: 17px 17px 13px; display: flex; align-items: end; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .panel-heading h2 { margin: 0; font-family: Georgia, "Noto Serif KR", serif; font-size: 18px; }
@@ -87,7 +88,7 @@ button { color: inherit; }
 .map-caption .eyebrow { color: #c6aa65; }.map-caption strong, .map-caption span { display: block; }.map-caption strong { font-family: Georgia, serif; font-size: 17px; }.map-caption span { margin-top: 3px; color: #b9c8c3; font-size: 10px; }
 .map-attribution { position: absolute; right: 5px; bottom: 3px; z-index: 800; padding: 2px 4px; background: #ffffffcc; color: #54615d; font-size: 8px; pointer-events: none; }
 
-.detail-panel { position: absolute; z-index: 10; top: 0; right: 0; width: min(450px, 92vw); height: 100%; overflow: auto; background: #fbfaf6; border-left: 1px solid #c9c4b7; box-shadow: -18px 0 44px #10292322; }
+.detail-panel { position: relative; z-index: 10; grid-column: 3; width: 100%; min-width: 0; height: 100%; overflow: auto; background: #fbfaf6; border-left: 1px solid #c9c4b7; box-shadow: -10px 0 28px #10292318; }
 .close-detail { position: absolute; z-index: 2; top: 12px; right: 12px; width: 30px; height: 30px; border: 1px solid #ffffff66; background: #0d2520aa; color: white; cursor: pointer; font-size: 18px; }
 .detail-hero { padding: 23px 23px 21px; background: #14352f; color: white; border-bottom: 4px solid #b28c3d; }
 .detail-tags { display: flex; align-items: center; gap: 7px; margin-bottom: 23px; color: #c5d1cd; font-size: 9px; }
@@ -130,6 +131,10 @@ button { color: inherit; }
   .kpi-rail { grid-template-columns: repeat(5, minmax(105px, 1fr)); overflow-x: auto; }
   .filter-bar { flex-wrap: wrap; }.search-box { order: 3; max-width: none; flex-basis: 100%; }.result-count { display: none; }
   .workspace { height: calc(100vh - 314px); min-height: 520px; grid-template-columns: 300px 1fr; }
+  .workspace.detail-open { grid-template-columns: minmax(320px, 1fr) 370px; }
+  .workspace.detail-open .asset-panel { display: none; }
+  .workspace.detail-open .map-panel { grid-column: 1; }
+  .workspace.detail-open .detail-panel { grid-column: 2; }
 }
 
 @media (max-width: 650px) {
@@ -137,6 +142,6 @@ button { color: inherit; }
   .kpi { min-width: 112px; min-height: 65px; padding: 10px 12px; }.kpi strong { font-size: 20px; }
   .filter-bar { padding: 8px; }.segmented { width: 100%; }.segmented button { flex: 1; padding: 0 7px; }.filter-bar select { flex: 1; }.search-box { flex-basis: auto; order: 0; }
   .mobile-switch { display: grid; grid-template-columns: 1fr 1fr; background: #ddd9ce; border-bottom: 1px solid var(--line); }.mobile-switch button { height: 38px; border: 0; background: transparent; font-size: 11px; font-weight: 700; }.mobile-switch button.active { background: #173b35; color: white; }
-  .workspace { height: calc(100vh - 340px); min-height: 500px; display: block; }.asset-panel, .map-panel { display: none; position: absolute; inset: 0; }.asset-panel.mobile-on, .map-panel.mobile-on { display: flex; }.map-panel.mobile-on { display: block; }
-  .detail-panel { width: 92vw; }
+  .workspace, .workspace.detail-open { height: calc(100vh - 340px); min-height: 500px; display: block; }.asset-panel, .map-panel, .workspace.detail-open .asset-panel { display: none; position: absolute; inset: 0; }.asset-panel.mobile-on, .workspace.detail-open .asset-panel.mobile-on, .map-panel.mobile-on { display: flex; }.map-panel.mobile-on { display: block; }
+  .detail-panel { position: absolute; top: 0; right: 0; width: 92vw; }
 }

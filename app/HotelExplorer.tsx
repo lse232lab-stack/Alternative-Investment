@@ -90,7 +90,7 @@ export default function HotelExplorer() {
         <button className={mobileView === "list" ? "active" : ""} onClick={() => setMobileView("list")}>리스트</button>
       </div>
 
-      <section className="workspace">
+      <section className={`workspace ${selected ? "detail-open" : ""}`}>
         <aside className={`asset-panel ${mobileView === "list" ? "mobile-on" : ""}`}>
           <div className="panel-heading">
             <div>
@@ -230,7 +230,7 @@ function HotelMap({ visibleHotels, selected, onSelect }: { visibleHotels: Hotel[
 
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
-    const resize = new ResizeObserver(() => map.invalidateSize({ animate: false }));
+    const resize = new ResizeObserver(() => map.invalidateSize({ animate: false, pan: false }));
     resize.observe(containerRef.current);
 
     return () => {
@@ -272,10 +272,30 @@ function HotelMap({ visibleHotels, selected, onSelect }: { visibleHotels: Hotel[
           offset: [0, -7],
           className: "hotel-tooltip",
         })
-        .on("click", () => onSelect(hotel));
+        .on("click", (event: any) => {
+          if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+          onSelect(hotel);
+        });
       marker.addTo(layer);
     });
   }, [visibleHotels, selected, onSelect]);
+
+  useEffect(() => {
+    if (!selected || !mapRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        map.invalidateSize({ animate: false, pan: false });
+        map.panInside([selected.lat, selected.lng], {
+          paddingTopLeft: [72, 72],
+          paddingBottomRight: [72, 72],
+          animate: false,
+        });
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selected]);
 
   return <div ref={containerRef} className="leaflet-map" aria-label="드래그와 확대·축소가 가능한 서울 호텔 지도" />;
 }
