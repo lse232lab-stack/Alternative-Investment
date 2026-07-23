@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { hotels, type Hotel } from "./hotels";
+import { getHotelProfile } from "./hotelProfiles";
 
 type GradeFilter = "all" | 5 | 4 | "transaction";
 
@@ -16,6 +17,7 @@ export default function HotelExplorer() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Hotel | null>(hotels.find((hotel) => hotel.transaction) ?? hotels[0]);
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  const [detailTab, setDetailTab] = useState<"asset" | "investment" | "location" | "sources">("asset");
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -31,7 +33,10 @@ export default function HotelExplorer() {
 
   const choose = useCallback((hotel: Hotel) => {
     setSelected(hotel);
+    setDetailTab("asset");
   }, []);
+
+  const profile = selected ? getHotelProfile(selected) : null;
 
   return (
     <main className="app-shell">
@@ -127,7 +132,7 @@ export default function HotelExplorer() {
           <div className="map-attribution">© OpenStreetMap contributors</div>
         </section>
 
-        {selected && (
+        {selected && profile && (
           <aside className="detail-panel">
             <button className="close-detail" onClick={() => setSelected(null)} aria-label="상세 닫기">×</button>
             <div className="detail-hero">
@@ -145,37 +150,55 @@ export default function HotelExplorer() {
               <Metric label="브랜드군" value={selected.brand} />
               <Metric label="등급 결정일" value={selected.gradeDate} />
             </div>
+            <div className="detail-tabs">
+              {([['asset','자산'],['investment','투자'],['location','입지·상권'],['sources','출처']] as const).map(([key,label]) =>
+                <button key={key} className={detailTab === key ? "active" : ""} onClick={() => setDetailTab(key)}>{label}</button>
+              )}
+            </div>
 
-            {selected.transaction ? (
-              <div className="deal-box">
-                <div className="section-title"><span>확인 거래</span><b>CONF. {selected.transaction.confidence}</b></div>
-                <div className="deal-amount"><strong>{formatNumber(selected.transaction.amount)}</strong><span>억원</span></div>
-                <div className="deal-grid">
-                  <span>거래연도<b>{selected.transaction.year}</b></span>
-                  <span>객실당<b>{formatNumber(selected.transaction.perKey)}억원</b></span>
-                  <span>투자유형<b>{selected.transaction.theme}</b></span>
+            {detailTab === "asset" && <>
+              <div className="profile-block">
+                <div className="section-title"><span>준공·개관</span><b>ASSET</b></div>
+                <strong>{profile.opening}</strong>
+                <p className="subcopy">{profile.renovation}</p>
+              </div>
+              <div className="profile-block">
+                <div className="section-title"><span>대표 시설</span><b>OFFICIAL WEB</b></div>
+                <div className="facility-chips">{profile.facilities.map((item) => <span key={item}>{item}</span>)}</div>
+                <a className="official-link" href={profile.officialUrl} target="_blank" rel="noreferrer">호텔 공식 홈페이지에서 상세 확인 ↗</a>
+              </div>
+              <div className="profile-block">
+                <div className="section-title"><span>자산 구성</span><b>PHYSICAL</b></div>
+                <dl className="fact-list"><div><dt>객실</dt><dd>{formatNumber(selected.rooms)}실</dd></div><div><dt>자산형태</dt><dd>{selected.assetType}</dd></div><div><dt>운영 브랜드</dt><dd>{profile.operator}</dd></div></dl>
+              </div>
+            </>}
+
+            {detailTab === "investment" && <>
+              {selected.transaction ? (
+                <div className="deal-box">
+                  <div className="section-title"><span>확인 거래</span><b>CONF. {selected.transaction.confidence}</b></div>
+                  <div className="deal-amount"><strong>{formatNumber(selected.transaction.amount)}</strong><span>억원</span></div>
+                  <div className="deal-grid"><span>거래연도<b>{selected.transaction.year}</b></span><span>객실당<b>{formatNumber(selected.transaction.perKey)}억원</b></span><span>투자유형<b>{selected.transaction.theme}</b></span></div>
+                  <p>{selected.transaction.buyer}</p>
                 </div>
-                <p>{selected.transaction.buyer}</p>
+              ) : <div className="no-deal-box"><span>공개 거래 미확인</span><p>거래가를 임의 추정하지 않았습니다. 등기·펀드 공시·감정평가서 원문 확인이 필요합니다.</p></div>}
+              <div className="profile-block">
+                <div className="section-title"><span>소유·운영 구조</span><b>VERIFY</b></div>
+                <strong>{selected.owner}</strong><p className="subcopy">{profile.ownershipNote}</p>
               </div>
-            ) : (
-              <div className="no-deal-box">
-                <span>공개 거래 미확인</span>
-                <p>보유구조 및 최근 거래 여부를 등기·공시로 추가 확인해야 합니다.</p>
-              </div>
-            )}
+              <div className="profile-block"><div className="section-title"><span>핵심 투자 DD</span><b>CHECK</b></div><p>{selected.dd}</p></div>
+            </>}
 
-            <div className="detail-section">
-              <div className="section-title"><span>소유·구조</span><b>VERIFY</b></div>
-              <p className="owner-line">{selected.owner}</p>
-            </div>
-            <div className="detail-section">
-              <div className="section-title"><span>핵심 DD</span><b>01</b></div>
-              <p>{selected.dd}</p>
-            </div>
-            <div className="detail-section source-note">
-              <div className="section-title"><span>데이터 신뢰도</span><b>{selected.coordinateConfidence === "address" ? "HIGH" : "MID"}</b></div>
-              <p>등급·객실·주소: 문화체육관광부 기준. 좌표: 공공 지오코딩. 소유권과 거래구조는 투자판단 전 원문 확인이 필요합니다.</p>
-            </div>
+            {detailTab === "location" && <>
+              <div className="profile-block location-lead"><div className="section-title"><span>{selected.zone} 입지</span><b>SUBMARKET</b></div><p>{profile.locationSummary}</p></div>
+              <div className="profile-block"><div className="section-title"><span>주요 수요 발생원</span><b>DEMAND</b></div><ul>{profile.demandDrivers.map(x => <li key={x}>{x}</li>)}</ul></div>
+              <div className="profile-block"><div className="section-title"><span>인접 핵심 상권·시설</span><b>AREA</b></div><div className="nearby-grid">{profile.nearby.map(x => <span key={x}>{x}</span>)}</div><p className="subcopy">거리·도보시간은 향후 교통 API 및 현장실사로 보강합니다.</p></div>
+            </>}
+
+            {detailTab === "sources" && <>
+              <div className="profile-block"><div className="section-title"><span>자산별 근거자료</span><b>{profile.sources.length} LINKS</b></div><div className="source-list">{profile.sources.map((source) => <a key={source.label+source.url} href={source.url} target="_blank" rel="noreferrer"><span>{source.kind}</span><strong>{source.label}</strong><b>↗</b></a>)}</div></div>
+              <div className="detail-section source-note"><div className="section-title"><span>검증 기준</span><b>{selected.coordinateConfidence === "address" ? "HIGH" : "MID"}</b></div><p>등급·객실·주소는 문화체육관광부 자료를 우선 사용했습니다. 시설은 공식 홈페이지, 거래는 공시·시장자료를 연결했습니다. ‘미확인’ 항목은 임의 추정하지 않습니다.</p></div>
+            </>}
           </aside>
         )}
       </section>
