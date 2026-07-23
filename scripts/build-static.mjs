@@ -18,7 +18,9 @@ execFileSync(path.join(root, "node_modules", ".bin", "esbuild"), [
   "--outfile=dist/client/assets/app.js",
 ], { cwd: root, stdio: "inherit" });
 
-const css = fs.readFileSync(path.join(root, "app", "globals.css"), "utf8").replace(/^@import\s+"tailwindcss";\s*/m, "");
+const leafletCss = fs.readFileSync(path.join(root, "node_modules", "leaflet", "dist", "leaflet.css"), "utf8");
+const appCss = fs.readFileSync(path.join(root, "app", "globals.css"), "utf8").replace(/^@import\s+"tailwindcss";\s*/m, "");
+const css = `${leafletCss}\n${appCss}`;
 fs.writeFileSync(path.join(assets, "site.css"), css);
 fs.copyFileSync(path.join(root, "public", "og.png"), path.join(client, "og.png"));
 

@@ -1,21 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import L from "leaflet";
 import { hotels, type Hotel } from "./hotels";
 
 type GradeFilter = "all" | 5 | 4 | "transaction";
 
-const bounds = { west: 126.76, south: 37.42, east: 127.2, north: 37.72 };
 const zones = ["전체 권역", "CBD", "GBD", "YBD", "용산·이태원", "서북·홍대", "마곡·김포공항", "동서울", "서남", "기타"];
 
 const formatNumber = (value: number) => new Intl.NumberFormat("ko-KR").format(value);
-
-function markerPosition(hotel: Hotel) {
-  return {
-    left: `${((hotel.lng - bounds.west) / (bounds.east - bounds.west)) * 100}%`,
-    top: `${((bounds.north - hotel.lat) / (bounds.north - bounds.south)) * 100}%`,
-  };
-}
 
 function priorityScore(hotel: Hotel) {
   const grade = hotel.grade === 5 ? 24 : 15;
@@ -45,9 +38,9 @@ export default function HotelExplorer() {
   const totalRooms = hotels.reduce((sum, hotel) => sum + hotel.rooms, 0);
   const transactionCount = hotels.filter((hotel) => hotel.transaction).length;
 
-  const choose = (hotel: Hotel) => {
+  const choose = useCallback((hotel: Hotel) => {
     setSelected(hotel);
-  };
+  }, []);
 
   return (
     <main className="app-shell">
@@ -131,12 +124,7 @@ export default function HotelExplorer() {
         </aside>
 
         <section className={`map-panel ${mobileView === "map" ? "mobile-on" : ""}`} aria-label="서울 호텔 지도">
-          <iframe
-            className="osm-map"
-            title="OpenStreetMap 서울 지도"
-            src="https://www.openstreetmap.org/export/embed.html?bbox=126.76%2C37.42%2C127.20%2C37.72&layer=mapnik"
-          />
-          <div className="map-wash" />
+          <HotelMap visibleHotels={filtered} selected={selected} onSelect={choose} />
           <div className="map-legend">
             <span><i className="legend-dot five" /> 5성급</span>
             <span><i className="legend-dot four" /> 4성급</span>
@@ -147,18 +135,6 @@ export default function HotelExplorer() {
             <strong>{zone === "전체 권역" ? "서울 전역" : zone}</strong>
             <span>{filtered.length}개 자산 표시</span>
           </div>
-          {filtered.map((hotel) => (
-            <button
-              key={hotel.id}
-              className={`map-marker grade-${hotel.grade} ${hotel.transaction ? "has-deal" : ""} ${selected?.id === hotel.id ? "selected" : ""}`}
-              style={markerPosition(hotel)}
-              onClick={() => choose(hotel)}
-              aria-label={`${hotel.name}, ${hotel.grade}성급`}
-              title={hotel.name}
-            >
-              <span>{hotel.transaction ? "₩" : hotel.grade}</span>
-            </button>
-          ))}
           <div className="map-attribution">© OpenStreetMap contributors</div>
         </section>
 
@@ -216,6 +192,88 @@ export default function HotelExplorer() {
       </section>
     </main>
   );
+}
+
+function HotelMap({ visibleHotels, selected, onSelect }: { visibleHotels: Hotel[]; selected: Hotel | null; onSelect: (hotel: Hotel) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const layerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [37.5665, 126.978],
+      zoom: 11,
+      minZoom: 10,
+      maxZoom: 17,
+      scrollWheelZoom: true,
+      zoomControl: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+
+    layerRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
+    const resize = new ResizeObserver(() => map.invalidateSize({ animate: false }));
+    resize.observe(containerRef.current);
+
+    return () => {
+      resize.disconnect();
+      map.remove();
+      mapRef.current = null;
+      layerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
+
+    layer.clearLayers();
+    visibleHotels.forEach((hotel) => {
+      const isSelected = selected?.id === hotel.id;
+      if (hotel.transaction) {
+        L.circleMarker([hotel.lat, hotel.lng], {
+          radius: isSelected ? 13 : 10,
+          color: "#a63a2c",
+          weight: 3,
+          opacity: 0.92,
+          fillOpacity: 0,
+          interactive: false,
+        }).addTo(layer);
+      }
+
+      const marker = L.circleMarker([hotel.lat, hotel.lng], {
+        radius: isSelected ? 8 : 6,
+        color: isSelected ? "#102a25" : "#ffffff",
+        weight: isSelected ? 3 : 2,
+        fillColor: hotel.grade === 5 ? "#a77824" : "#0e756b",
+        fillOpacity: 0.96,
+      })
+        .bindTooltip(`<strong>${hotel.name}</strong><br>${hotel.grade}성 · ${hotel.rooms.toLocaleString("ko-KR")}실`, {
+          direction: "top",
+          offset: [0, -7],
+          className: "hotel-tooltip",
+        })
+        .on("click", () => onSelect(hotel));
+      marker.addTo(layer);
+    });
+  }, [visibleHotels, selected, onSelect]);
+
+  useEffect(() => {
+    if (!selected || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!map.getBounds().pad(-0.2).contains([selected.lat, selected.lng])) {
+      map.flyTo([selected.lat, selected.lng], Math.max(map.getZoom(), 12), { duration: 0.55 });
+    }
+  }, [selected]);
+
+  return <div ref={containerRef} className="leaflet-map" aria-label="드래그와 확대·축소가 가능한 서울 호텔 지도" />;
 }
 
 function Kpi({ label, value, unit, tone = "" }: { label: string; value: string; unit: string; tone?: string }) {
