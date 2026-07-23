@@ -144,6 +144,7 @@ export default function HotelExplorer() {
               <p className="eyebrow">{selected.id} / INVESTMENT CARD</p>
               <h2>{selected.name}</h2>
               <p>{selected.address}</p>
+              <div className="research-line"><span>원문·공공자료 연결</span><strong>{profile.sources.length}건</strong><span>확인 항목</span><strong>{profile.verifiedCount}개</strong></div>
             </div>
             <div className="detail-metrics">
               <Metric label="객실수" value={`${formatNumber(selected.rooms)}실`} />
@@ -169,7 +170,8 @@ export default function HotelExplorer() {
               </div>
               <div className="profile-block">
                 <div className="section-title"><span>자산 구성</span><b>PHYSICAL</b></div>
-                <dl className="fact-list"><div><dt>객실</dt><dd>{formatNumber(selected.rooms)}실</dd></div><div><dt>자산형태</dt><dd>{selected.assetType}</dd></div><div><dt>운영 브랜드</dt><dd>{profile.operator}</dd></div></dl>
+                <dl className="fact-list rich-facts">{profile.physicalFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd><span className={`fact-status ${fact.status === "확인중" ? "pending" : ""}`}>{fact.status}</span></div>)}</dl>
+                <p className="subcopy">연면적·주차·대지면적은 주소 기반 건축물대장 원문 연계 후 확정합니다.</p>
               </div>
             </>}
 
@@ -184,15 +186,18 @@ export default function HotelExplorer() {
               ) : <div className="no-deal-box"><span>공개 거래 미확인</span><p>거래가를 임의 추정하지 않았습니다. 등기·펀드 공시·감정평가서 원문 확인이 필요합니다.</p></div>}
               <div className="profile-block">
                 <div className="section-title"><span>소유·운영 구조</span><b>VERIFY</b></div>
-                <strong>{selected.owner}</strong><p className="subcopy">{profile.ownershipNote}</p>
+                <dl className="fact-list structure-facts">{profile.structureFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd><span className={`fact-status ${fact.status === "확인중" ? "pending" : ""}`}>{fact.status}</span></div>)}</dl>
+                <p className="subcopy">{profile.ownershipNote}</p>
               </div>
-              <div className="profile-block"><div className="section-title"><span>핵심 투자 DD</span><b>CHECK</b></div><p>{selected.dd}</p></div>
+              <div className="profile-block"><div className="section-title"><span>핵심 투자 DD</span><b>CHECK</b></div><p>{selected.dd}</p><ul className="dd-list"><li>토지·건물 등기상 소유자와 담보권</li><li>운영계약 기간·수수료·해지권·GOP 보장</li><li>최근 3개년 CAPEX와 향후 객실·설비 투자계획</li><li>거래가격에 리테일·오피스 등 복합부분 포함 여부</li></ul></div>
             </>}
 
             {detailTab === "location" && <>
               <div className="profile-block location-lead"><div className="section-title"><span>{selected.zone} 입지</span><b>SUBMARKET</b></div><p>{profile.locationSummary}</p></div>
+              <div className="profile-block"><div className="section-title"><span>주요 거점 직선거리</span><b>COORDINATE</b></div><div className="distance-list">{profile.nearbyNodes.map((node) => <div key={node.name}><span>{node.category}</span><strong>{node.name}</strong><b>{node.distanceKm < 1 ? `${Math.round(node.distanceKm * 1000)}m` : `${node.distanceKm.toFixed(1)}km`}</b></div>)}</div><p className="subcopy">호텔 좌표와 주요 거점 좌표 간 직선거리입니다. 실제 도보·차량거리는 교통망 연계 후 확정합니다.</p></div>
               <div className="profile-block"><div className="section-title"><span>주요 수요 발생원</span><b>DEMAND</b></div><ul>{profile.demandDrivers.map(x => <li key={x}>{x}</li>)}</ul></div>
               <div className="profile-block"><div className="section-title"><span>인접 핵심 상권·시설</span><b>AREA</b></div><div className="nearby-grid">{profile.nearby.map(x => <span key={x}>{x}</span>)}</div><p className="subcopy">거리·도보시간은 향후 교통 API 및 현장실사로 보강합니다.</p></div>
+              <div className="profile-block market-block"><div className="section-title"><span>권역 시장 해석</span><b>MARKET</b></div><ul>{profile.marketSignals.map(x => <li key={x}>{x}</li>)}</ul></div>
             </>}
 
             {detailTab === "sources" && <>
