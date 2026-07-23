@@ -10,15 +10,6 @@ const zones = ["전체 권역", "CBD", "GBD", "YBD", "용산·이태원", "서�
 
 const formatNumber = (value: number) => new Intl.NumberFormat("ko-KR").format(value);
 
-function priorityScore(hotel: Hotel) {
-  const grade = hotel.grade === 5 ? 24 : 15;
-  const scale = Math.min(22, hotel.rooms / 30);
-  const zone = ["CBD", "GBD", "YBD"].includes(hotel.zone) ? 18 : 12;
-  const deal = hotel.transaction ? 24 : 9;
-  const confidence = hotel.coordinateConfidence === "address" ? 8 : 5;
-  return Math.round(grade + scale + zone + deal + confidence);
-}
-
 export default function HotelExplorer() {
   const [grade, setGrade] = useState<GradeFilter>("all");
   const [zone, setZone] = useState("전체 권역");
@@ -32,7 +23,7 @@ export default function HotelExplorer() {
       .filter((hotel) => grade === "all" || (grade === "transaction" ? hotel.transaction : hotel.grade === grade))
       .filter((hotel) => zone === "전체 권역" || hotel.zone === zone)
       .filter((hotel) => !normalized || [hotel.name, hotel.address, hotel.district, hotel.brand].join(" ").toLowerCase().includes(normalized))
-      .sort((a, b) => priorityScore(b) - priorityScore(a));
+      .sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }, [grade, zone, query]);
 
   const totalRooms = hotels.reduce((sum, hotel) => sum + hotel.rooms, 0);
@@ -99,14 +90,13 @@ export default function HotelExplorer() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">ASSET UNIVERSE</p>
-              <h2>투자 검토 자산</h2>
+              <h2>호텔 자산 목록</h2>
             </div>
-            <span>우선순위순</span>
+            <span>호텔명순</span>
           </div>
           <div className="asset-list">
-            {filtered.map((hotel, index) => (
+            {filtered.map((hotel) => (
               <button key={hotel.id} className={`asset-card ${selected?.id === hotel.id ? "selected" : ""}`} onClick={() => choose(hotel)}>
-                <span className="rank">{String(index + 1).padStart(2, "0")}</span>
                 <span className="card-main">
                   <span className="card-topline">
                     <span className={`grade-pill grade-${hotel.grade}`}>{hotel.grade}성</span>
@@ -116,7 +106,6 @@ export default function HotelExplorer() {
                   <strong>{hotel.name}</strong>
                   <span className="card-meta">{hotel.district} · {formatNumber(hotel.rooms)}실 · {hotel.brand}</span>
                 </span>
-                <span className="score"><b>{priorityScore(hotel)}</b><small>score</small></span>
               </button>
             ))}
             {!filtered.length && <div className="empty-state">조건에 맞는 자산이 없습니다.</div>}
@@ -154,7 +143,7 @@ export default function HotelExplorer() {
             <div className="detail-metrics">
               <Metric label="객실수" value={`${formatNumber(selected.rooms)}실`} />
               <Metric label="브랜드군" value={selected.brand} />
-              <Metric label="우선순위" value={`${priorityScore(selected)} / 100`} />
+              <Metric label="등급 결정일" value={selected.gradeDate} />
             </div>
 
             {selected.transaction ? (
