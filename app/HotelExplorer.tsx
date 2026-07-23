@@ -277,14 +277,6 @@ function HotelMap({ visibleHotels, selected, onSelect }: { visibleHotels: Hotel[
     });
   }, [visibleHotels, selected, onSelect]);
 
-  useEffect(() => {
-    if (!selected || !mapRef.current) return;
-    const map = mapRef.current;
-    if (!map.getBounds().pad(-0.2).contains([selected.lat, selected.lng])) {
-      map.flyTo([selected.lat, selected.lng], Math.max(map.getZoom(), 12), { duration: 0.55 });
-    }
-  }, [selected]);
-
   return <div ref={containerRef} className="leaflet-map" aria-label="드래그와 확대·축소가 가능한 서울 호텔 지도" />;
 }
 
