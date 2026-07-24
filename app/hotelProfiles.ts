@@ -1,4 +1,5 @@
 import type { Hotel } from "./hotels";
+import { buildingRegister } from "./buildingRegister";
 
 export type SourceLink = { label: string; url: string; kind: "공식" | "공시·리서치" | "공공데이터" | "보조자료" };
 export type NearbyNode = { name: string; category: string; distanceKm: number };
@@ -14,6 +15,9 @@ export type HotelProfile = {
   nearby: string[];
   nearbyNodes: NearbyNode[];
   physicalFacts: { label: string; value: string; status: "확인" | "보조자료" | "확인중" }[];
+  buildingRegisterStatus: "확인" | "재매칭 필요";
+  buildingRegisterNote: string;
+  assetMetrics: { label: string; value: string; note: string }[];
   structureFacts: { label: string; value: string; status: "확인" | "확인중" }[];
   marketSignals: string[];
   verifiedCount: number;
@@ -206,6 +210,14 @@ function facilitiesFor(hotel: Hotel) {
   return items;
 }
 
+const formatArea = (value: number | null) => value == null ? "대장 기재 없음" : `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡`;
+const formatRatio = (value: number | null) => value == null ? "대장 기재 없음" : `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%`;
+const formatCount = (value: number | null, unit: string) => value == null ? "대장 기재 없음" : `${value.toLocaleString("ko-KR")} ${unit}`;
+const formatFloors = (above: number | null, below: number | null) => {
+  if (above == null && below == null) return "대장 기재 없음";
+  return [above == null ? null : `지상 ${above}층`, below == null ? null : `지하 ${below}층`].filter(Boolean).join(" · ");
+};
+
 export function getHotelProfile(hotel: Hotel): HotelProfile {
   const area = zoneInfo[hotel.zone] ?? zoneInfo.기타;
   const url = officialUrl(hotel);
@@ -218,19 +230,52 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
   if (hotel.id === "SEL-045") baseSources.push({ label: "앰배서더 서울 풀만 2022 리노베이션 공지", url: "https://www.ambatel.com/ko/about/newsView.do?hotel_code=H3706&page=1&prod_id=2912", kind: "공식" });
   const physical = physicalOverrides[hotel.id];
   if (physical) baseSources.push({ label: "OpenStreetMap 건물·호텔 보조정보", url: physical.osm, kind: "보조자료" });
+  const ledger = buildingRegister[hotel.id as keyof typeof buildingRegister];
+  if (ledger) baseSources.push({ label: `건축HUB 건축물대장 · ${ledger.ledgerScope}`, url: "https://www.data.go.kr/data/15134735/openapi.do", kind: "공공데이터" });
   if (["SEL-011", "SEL-030", "SEL-039", "SEL-047"].includes(hotel.id)) baseSources.push({ label: "서부T&D 서울드래곤시티 IR 자료", url: "https://kind.krx.co.kr/external/dst/irReference/17422/%EC%84%9C%EB%B6%80T%26D%20%ED%9A%8C%EC%82%AC%EC%86%8C%EA%B0%9C%EC%9E%90%EB%A3%8C_202508_v2.pdf", kind: "공시·리서치" });
   if (hotel.id === "SEL-037") baseSources.push({ label: "롯데리츠 사업보고서 · L7 강남", url: "https://kind.krx.co.kr/external/2026/03/03/001104/20260303003018/00591.htm", kind: "공시·리서치" });
   if (hotel.id === "SEL-049") baseSources.push({ label: "호텔신라 공시 · 서울호텔 리노베이션", url: "https://kind.krx.co.kr/external/2026/04/10/001082/20260410002474/10002.htm", kind: "공시·리서치" });
   const open = opening[hotel.id];
   const structure = structureOverrides[hotel.id];
-  const physicalFacts = [
+  const ledgerFact = (label: string, value: string, available: boolean) => ({ label, value, status: available ? "확인" as const : "확인중" as const });
+  const physicalFacts = ledger ? [
     { label: "등록 객실", value: `${hotel.rooms.toLocaleString("ko-KR")}실`, status: "확인" as const },
-    { label: "층수", value: physical?.levels ?? "건축물대장 확인 중", status: physical?.levels ? "보조자료" as const : "확인중" as const },
-    { label: "건물 높이", value: physical?.height ?? "건축물대장 확인 중", status: physical?.height ? "보조자료" as const : "확인중" as const },
-    { label: "연면적", value: "건축물대장 연계 예정", status: "확인중" as const },
-    { label: "주차대수", value: "건축물대장 연계 예정", status: "확인중" as const },
+    ledgerFact("사용승인일", ledger.approvalDate ?? "대장 기재 없음", ledger.approvalDate != null),
+    ledgerFact("대지면적", formatArea(ledger.siteArea), ledger.siteArea != null),
+    ledgerFact("건축면적", formatArea(ledger.buildingArea), ledger.buildingArea != null),
+    ledgerFact("연면적", formatArea(ledger.totalArea), ledger.totalArea != null),
+    ledgerFact("건폐율", formatRatio(ledger.coverageRatio), ledger.coverageRatio != null),
+    ledgerFact("용적률", formatRatio(ledger.floorAreaRatio), ledger.floorAreaRatio != null),
+    ledgerFact("층수", formatFloors(ledger.floorsAbove, ledger.floorsBelow), ledger.floorsAbove != null || ledger.floorsBelow != null),
+    ledgerFact("높이", ledger.height == null ? "대장 기재 없음" : `${ledger.height.toLocaleString("ko-KR")}m`, ledger.height != null),
+    ledgerFact("구조", ledger.structure ?? "대장 기재 없음", ledger.structure != null),
+    ledgerFact("주용도", ledger.mainPurpose ?? "대장 기재 없음", ledger.mainPurpose != null),
+    ledgerFact("주차", formatCount(ledger.parking, "대"), ledger.parking != null),
+    ledgerFact("승강기", ledger.passengerElevators == null && ledger.emergencyElevators == null ? "대장 기재 없음" : `승용 ${ledger.passengerElevators ?? 0}대 · 비상 ${ledger.emergencyElevators ?? 0}대`, ledger.passengerElevators != null || ledger.emergencyElevators != null),
+    ledgerFact("내진설계", [ledger.seismicApplied, ledger.seismicCapacity].filter(Boolean).join(" · ") || "대장 기재 없음", ledger.seismicApplied != null || ledger.seismicCapacity != null),
+    { label: "자산 구성", value: hotel.assetType, status: "확인" as const },
+  ] : [
+    { label: "등록 객실", value: `${hotel.rooms.toLocaleString("ko-KR")}실`, status: "확인" as const },
+    { label: "층수", value: physical?.levels ?? "주소·필지 재매칭 필요", status: physical?.levels ? "보조자료" as const : "확인중" as const },
+    { label: "건물 높이", value: physical?.height ?? "주소·필지 재매칭 필요", status: physical?.height ? "보조자료" as const : "확인중" as const },
+    { label: "건축물대장", value: "주소·필지 재매칭 필요", status: "확인중" as const },
     { label: "자산 구성", value: hotel.assetType, status: "확인" as const },
   ];
+  const approvalYear = ledger?.approvalDate ? Number(ledger.approvalDate.slice(0, 4)) : null;
+  const hotelOnlyScope = ledger?.hotelUseMatched && ledger.candidateCount.titles === 1 && ledger.candidateCount.recaps === 0;
+  const assetMetrics = ledger ? [
+    { label: "준공 경과", value: approvalYear ? `${2026 - approvalYear}년` : "산정 불가", note: "2026년 기준·사용승인연도 단순 차감" },
+    { label: "객실당 연면적", value: hotelOnlyScope && ledger.totalArea ? `${(ledger.totalArea / hotel.rooms).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}㎡` : "범위 확인 필요", note: hotelOnlyScope ? "대장 연면적 ÷ 등록 객실수" : "복합자산 전체면적 배분 전 미산정" },
+    { label: "객실당 주차", value: hotelOnlyScope && ledger.parking != null ? `${(ledger.parking / hotel.rooms).toFixed(2)}대` : "범위 확인 필요", note: hotelOnlyScope ? "대장 주차대수 ÷ 등록 객실수" : "복합자산 주차 배분 전 미산정" },
+  ] : [];
+  const buildingRegisterStatus = ledger ? "확인" as const : "재매칭 필요" as const;
+  const buildingRegisterNote = !ledger
+    ? "도로명주소는 확인됐지만 건축물대장 표제부가 자동 매칭되지 않았습니다. 본번·부번 및 복합건축물 동명을 재확인해야 합니다."
+    : hotelOnlyScope
+      ? `${ledger.buildingName ? `${ledger.buildingName} · ` : ""}${ledger.ledgerScope} 기준입니다. 공공데이터 수집일 ${ledger.fetchedAt.slice(0, 10)}.`
+      : ledger.hotelUseMatched
+        ? `복합건축물 ${ledger.buildingName ?? "표제부"} 기준입니다. 면적·주차는 대장상 건물 또는 대지 전체 수치일 수 있어 호텔 귀속분을 별도 확인해야 합니다.`
+      : `복합건축물 ${ledger.buildingName ?? "표제부"} 기준입니다. 주용도가 숙박시설로 직접 식별되지 않아 호텔 전용면적·공용부 배분을 별도 확인해야 합니다.`;
   const structureFacts = structure
     ? structure.map((value, index) => ({ label: ["소유구조", "계약·보유", "운영구조"][index] ?? "구조", value, status: "확인" as const }))
     : [
@@ -241,7 +286,7 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
   const verifiedCount = physicalFacts.filter((fact) => fact.status !== "확인중").length + structureFacts.filter((fact) => fact.status === "확인").length + baseSources.length;
   return {
     officialUrl: url,
-    opening: open ? `${open[0]} · ${open[1]}` : "공식 홈페이지·건축물대장 추가 확인 중",
+    opening: ledger?.approvalDate ? `사용승인 ${ledger.approvalDate} · 건축물대장` : open ? `${open[0]} · ${open[1]}` : "공식 홈페이지·건축물대장 추가 확인 중",
     renovation: renovation[hotel.id] ?? "공개된 주요 리모델링 이력 미확인",
     facilities: facilitiesFor(hotel),
     operator: hotel.brand,
@@ -251,6 +296,9 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
     nearby: area.nearby,
     nearbyNodes: nearestNodes(hotel),
     physicalFacts,
+    buildingRegisterStatus,
+    buildingRegisterNote,
+    assetMetrics,
     structureFacts,
     marketSignals: marketSignalsByZone[hotel.zone] ?? marketSignalsByZone.기타,
     verifiedCount,

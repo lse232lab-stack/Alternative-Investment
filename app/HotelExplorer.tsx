@@ -49,7 +49,7 @@ export default function HotelExplorer() {
           </div>
         </div>
         <div className="header-meta">
-          <span className="status-dot" /> 데이터 기준 2026.06.01
+          <span className="status-dot" /> 데이터 기준 2026.07.24
           <span className="header-rule" />
           <span>서울 4·5성급 전수</span>
         </div>
@@ -169,9 +169,10 @@ export default function HotelExplorer() {
                 <a className="official-link" href={profile.officialUrl} target="_blank" rel="noreferrer">호텔 공식 홈페이지에서 상세 확인 ↗</a>
               </div>
               <div className="profile-block">
-                <div className="section-title"><span>자산 구성</span><b>PHYSICAL</b></div>
+                <div className="section-title"><span>건축물대장 자산 정보</span><b className={`registry-badge ${profile.buildingRegisterStatus === "재매칭 필요" ? "review" : ""}`}>{profile.buildingRegisterStatus}</b></div>
+                {profile.assetMetrics.length > 0 && <div className="asset-metric-grid">{profile.assetMetrics.map((metric) => <div key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.note}</small></div>)}</div>}
                 <dl className="fact-list rich-facts">{profile.physicalFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd><span className={`fact-status ${fact.status === "확인중" ? "pending" : ""}`}>{fact.status}</span></div>)}</dl>
-                <p className="subcopy">연면적·주차·대지면적은 주소 기반 건축물대장 원문 연계 후 확정합니다.</p>
+                <p className={`registry-note ${profile.buildingRegisterStatus === "재매칭 필요" ? "review" : ""}`}>{profile.buildingRegisterNote}</p>
               </div>
             </>}
 
