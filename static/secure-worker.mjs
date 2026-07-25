@@ -60,7 +60,8 @@ function normalizeUser(raw, env) {
 
 async function ensureDatabase(env) {
   if (!env.DB) return;
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS member_visits (
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS member_visits (
     clerk_user_id TEXT PRIMARY KEY,
     username TEXT,
     display_name TEXT,
@@ -69,7 +70,42 @@ async function ensureDatabase(env) {
     last_seen_at TEXT NOT NULL,
     visit_count INTEGER NOT NULL DEFAULT 1,
     status TEXT NOT NULL DEFAULT 'active'
-  )`).run();
+  )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS institutional_deals (
+      id TEXT PRIMARY KEY,
+      hotel_id TEXT NOT NULL,
+      hotel_name TEXT NOT NULL,
+      stage TEXT NOT NULL,
+      model_json TEXT NOT NULL,
+      owner_user_id TEXT NOT NULL,
+      owner_name TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS deal_events (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL,
+      actor_user_id TEXT NOT NULL,
+      actor_name TEXT NOT NULL,
+      action TEXT NOT NULL,
+      stage TEXT,
+      created_at TEXT NOT NULL
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS institutional_deals_updated_idx ON institutional_deals(updated_at DESC)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS deal_events_deal_idx ON deal_events(deal_id, created_at DESC)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS deal_documents (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL,
+      uploader_user_id TEXT NOT NULL,
+      uploader_name TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      content_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      r2_key TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS deal_documents_deal_idx ON deal_documents(deal_id, created_at DESC)"),
+  ]);
 }
 
 async function recordVisit(env, user) {
@@ -93,6 +129,31 @@ async function serveAsset(env, request, pathname) {
   return env.ASSETS.fetch(new Request(url, request));
 }
 
+const allowedStages = new Set(["Screening", "Underwriting", "LOI", "Due Diligence", "IC Review", "Closing", "Portfolio", "Exit"]);
+
+async function readDealPayload(request) {
+  const length = Number(request.headers.get("content-length") || 0);
+  if (length > 500000) throw new Error("딜 데이터가 너무 큽니다.");
+  const payload = await request.json();
+  if (!payload || typeof payload !== "object" || typeof payload.hotelId !== "string" || typeof payload.hotelName !== "string" || !allowedStages.has(payload.stage) || !payload.model || typeof payload.model !== "object") throw new Error("딜 입력값을 확인해주세요.");
+  const modelJson = JSON.stringify(payload.model);
+  if (modelJson.length > 400000) throw new Error("딜 모델이 저장 한도를 초과했습니다.");
+  return { hotelId: payload.hotelId.slice(0, 40), hotelName: payload.hotelName.slice(0, 160), stage: payload.stage, modelJson };
+}
+
+function serializeDeal(row) {
+  let model = {};
+  try { model = JSON.parse(row.modelJson || row.model_json || "{}"); } catch {}
+  return {
+    id: row.id, hotelId: row.hotelId || row.hotel_id, hotelName: row.hotelName || row.hotel_name, stage: row.stage,
+    ownerName: row.ownerName || row.owner_name, updatedAt: row.updatedAt || row.updated_at, createdAt: row.createdAt || row.created_at, model,
+  };
+}
+
+async function recordDealEvent(env, dealId, user, action, stage) {
+  await env.DB.prepare("INSERT INTO deal_events (id, deal_id, actor_user_id, actor_name, action, stage, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), dealId, user.id, user.displayName, action, stage, new Date().toISOString()).run();
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -109,6 +170,71 @@ export default {
         if (!env.DB) return json({ users: [] });
         const result = await env.DB.prepare("SELECT clerk_user_id AS id, username, display_name AS displayName, email, first_seen_at AS firstSeenAt, last_seen_at AS lastSeenAt, visit_count AS visitCount, status FROM member_visits ORDER BY last_seen_at DESC LIMIT 500").all();
         return json({ users: result.results || [] });
+      }
+      if (url.pathname === "/api/deals" && request.method === "GET") {
+        await authenticate(request, env);
+        await ensureDatabase(env);
+        if (!env.DB) return json({ deals: [] });
+        const result = await env.DB.prepare("SELECT id, hotel_id AS hotelId, hotel_name AS hotelName, stage, model_json AS modelJson, owner_name AS ownerName, created_at AS createdAt, updated_at AS updatedAt FROM institutional_deals ORDER BY updated_at DESC LIMIT 200").all();
+        return json({ deals: (result.results || []).map(serializeDeal) });
+      }
+      if (url.pathname === "/api/deals" && request.method === "POST") {
+        const user = await authenticate(request, env);
+        await ensureDatabase(env);
+        if (!env.DB) return json({ error: "저장소를 사용할 수 없습니다." }, 503);
+        const payload = await readDealPayload(request);
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+        await env.DB.prepare("INSERT INTO institutional_deals (id, hotel_id, hotel_name, stage, model_json, owner_user_id, owner_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, payload.hotelId, payload.hotelName, payload.stage, payload.modelJson, user.id, user.displayName, now, now).run();
+        await recordDealEvent(env, id, user, "created", payload.stage);
+        return json({ deal: serializeDeal({ id, ...payload, modelJson: payload.modelJson, ownerName: user.displayName, createdAt: now, updatedAt: now }) }, 201);
+      }
+      const dealMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)$/);
+      if (dealMatch && request.method === "PUT") {
+        const user = await authenticate(request, env);
+        await ensureDatabase(env);
+        if (!env.DB) return json({ error: "저장소를 사용할 수 없습니다." }, 503);
+        const existing = await env.DB.prepare("SELECT owner_user_id AS ownerUserId FROM institutional_deals WHERE id = ?").bind(dealMatch[1]).first();
+        if (!existing) return json({ error: "딜을 찾을 수 없습니다." }, 404);
+        if (existing.ownerUserId !== user.id && !user.isAdmin) return json({ error: "작성자 또는 관리자만 수정할 수 있습니다." }, 403);
+        const payload = await readDealPayload(request);
+        const now = new Date().toISOString();
+        await env.DB.prepare("UPDATE institutional_deals SET hotel_id = ?, hotel_name = ?, stage = ?, model_json = ?, updated_at = ? WHERE id = ?").bind(payload.hotelId, payload.hotelName, payload.stage, payload.modelJson, now, dealMatch[1]).run();
+        await recordDealEvent(env, dealMatch[1], user, "updated", payload.stage);
+        const row = await env.DB.prepare("SELECT id, hotel_id AS hotelId, hotel_name AS hotelName, stage, model_json AS modelJson, owner_name AS ownerName, created_at AS createdAt, updated_at AS updatedAt FROM institutional_deals WHERE id = ?").bind(dealMatch[1]).first();
+        return json({ deal: serializeDeal(row) });
+      }
+      const documentsMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)\/documents$/);
+      if (documentsMatch && request.method === "GET") {
+        await authenticate(request, env); await ensureDatabase(env);
+        if (!env.DB) return json({ documents: [] });
+        const result = await env.DB.prepare("SELECT id, filename, content_type AS contentType, size_bytes AS sizeBytes, uploader_name AS uploaderName, created_at AS createdAt FROM deal_documents WHERE deal_id = ? ORDER BY created_at DESC").bind(documentsMatch[1]).all();
+        return json({ documents: result.results || [] });
+      }
+      if (documentsMatch && request.method === "POST") {
+        const user = await authenticate(request, env); await ensureDatabase(env);
+        if (!env.DB || !env.FILES) return json({ error: "문서 저장소를 사용할 수 없습니다." }, 503);
+        const deal = await env.DB.prepare("SELECT owner_user_id AS ownerUserId FROM institutional_deals WHERE id = ?").bind(documentsMatch[1]).first();
+        if (!deal) return json({ error: "딜을 찾을 수 없습니다." }, 404);
+        if (deal.ownerUserId !== user.id && !user.isAdmin) return json({ error: "작성자 또는 관리자만 문서를 추가할 수 있습니다." }, 403);
+        const form = await request.formData(); const file = form.get("file");
+        if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") return json({ error: "업로드 파일이 필요합니다." }, 400);
+        if (file.size > 10 * 1024 * 1024) return json({ error: "파일은 10MB 이하만 허용됩니다." }, 413);
+        const id = crypto.randomUUID(); const safeName = String(file.name || "document").replace(/[^0-9A-Za-z가-힣._ -]/g, "_").slice(0, 180); const r2Key = `deals/${documentsMatch[1]}/${id}`; const now = new Date().toISOString();
+        await env.FILES.put(r2Key, file.stream(), { httpMetadata: { contentType: file.type || "application/octet-stream" }, customMetadata: { filename: safeName } });
+        await env.DB.prepare("INSERT INTO deal_documents (id, deal_id, uploader_user_id, uploader_name, filename, content_type, size_bytes, r2_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, documentsMatch[1], user.id, user.displayName, safeName, file.type || "application/octet-stream", file.size, r2Key, now).run();
+        await recordDealEvent(env, documentsMatch[1], user, "document_uploaded", null);
+        return json({ document: { id, filename: safeName, contentType: file.type || "application/octet-stream", sizeBytes: file.size, uploaderName: user.displayName, createdAt: now } }, 201);
+      }
+      const documentMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)\/documents\/([A-Za-z0-9-]+)$/);
+      if (documentMatch && request.method === "GET") {
+        await authenticate(request, env); await ensureDatabase(env);
+        if (!env.DB || !env.FILES) return json({ error: "문서 저장소를 사용할 수 없습니다." }, 503);
+        const document = await env.DB.prepare("SELECT filename, content_type AS contentType, r2_key AS r2Key FROM deal_documents WHERE id = ? AND deal_id = ?").bind(documentMatch[2], documentMatch[1]).first();
+        if (!document) return json({ error: "문서를 찾을 수 없습니다." }, 404);
+        const object = await env.FILES.get(document.r2Key); if (!object) return json({ error: "문서 파일을 찾을 수 없습니다." }, 404);
+        const headers = new Headers(); object.writeHttpMetadata(headers); headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(document.filename)}`); headers.set("cache-control", "private, no-store");
+        return new Response(object.body, { headers });
       }
       if (url.pathname === "/protected/app.js") {
         await authenticate(request, env);

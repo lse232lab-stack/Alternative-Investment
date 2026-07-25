@@ -19,7 +19,7 @@ async function api(path: string, token: string) {
   return response.json();
 }
 
-function mountMemberBar(clerk: any, user: SessionUser, token: string) {
+function mountMemberBar(clerk: any, user: SessionUser, getToken: () => Promise<string | null>) {
   const bar = document.createElement("aside");
   bar.className = "member-bar";
   bar.innerHTML = `<span class="creator-mark">Created by lse_232</span><span class="member-name">${escapeHtml(user.displayName || user.username)}</span>${user.isAdmin ? '<button type="button" data-admin>이용자 내역</button>' : ""}<button type="button" data-signout>로그아웃</button>`;
@@ -37,6 +37,8 @@ function mountMemberBar(clerk: any, user: SessionUser, token: string) {
     document.body.appendChild(modal);
     modal.querySelector(".admin-close")?.addEventListener("click", () => modal.remove());
     try {
+      const token = await getToken();
+      if (!token) throw new Error("로그인이 만료되었습니다.");
       const data = await api("/api/admin/users", token);
       const rows = data.users.map((item: any) => `<tr><td>${escapeHtml(item.username || "-")}</td><td>${escapeHtml(item.displayName || "-")}</td><td>${escapeHtml(item.email || "-")}</td><td>${escapeHtml(item.visitCount)}</td><td>${escapeHtml(item.lastSeenAt)}</td></tr>`).join("");
       const card = modal.querySelector(".admin-card");
@@ -64,8 +66,9 @@ async function start() {
   const source = await response.text();
   const moduleUrl = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
   const app = await import(/* @vite-ignore */ moduleUrl);
-  app.mountHotelApp();
-  mountMemberBar(clerk, session.user, token);
+  const getToken = () => clerk.session.getToken();
+  app.mountHotelApp({ getToken, user: session.user });
+  mountMemberBar(clerk, session.user, getToken);
   URL.revokeObjectURL(moduleUrl);
 }
 
