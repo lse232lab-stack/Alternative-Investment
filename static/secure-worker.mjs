@@ -1,3 +1,4 @@
+// Static authenticated entrypoint used by the Sites production bundle.
 const encoder = new TextEncoder();
 
 function json(data, status = 200) {
