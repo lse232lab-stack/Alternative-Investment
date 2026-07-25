@@ -26,7 +26,7 @@ if (!publishableKey.startsWith("pk_")) throw new Error("NEXT_PUBLIC_CLERK_PUBLIS
 const esbuild = path.join(root, "node_modules", ".bin", "esbuild");
 const common = ["--bundle", "--format=esm", "--target=es2022", "--minify", `--define:__CLERK_PUBLISHABLE_KEY__=${JSON.stringify(publishableKey)}`];
 
-for (const [entry, output] of [["static/main.tsx", "dist/client/assets/app.js"], ["static/bootstrap.ts", "dist/client/assets/bootstrap.js"], ["static/auth.ts", "dist/client/assets/auth.js"]]) {
+for (const [entry, output] of [["static/main.tsx", "dist/client/assets/app.js"], ["static/workbench.tsx", "dist/client/assets/workbench.js"], ["static/bootstrap.ts", "dist/client/assets/bootstrap.js"], ["static/auth.ts", "dist/client/assets/auth.js"]]) {
   execFileSync(esbuild, [entry, ...common, `--outfile=${output}`], { cwd: root, stdio: "inherit" });
 }
 
@@ -37,15 +37,22 @@ const institutionalCss = fs.readFileSync(path.join(root, "static", "institutiona
 fs.writeFileSync(path.join(assets, "site.css"), `${leafletCss}\n${appCss}\n${authCss}\n${institutionalCss}`);
 fs.copyFileSync(path.join(root, "public", "og.png"), path.join(client, "og.png"));
 
-const head = `<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="서울 호텔 자산 데이터, 언더라이팅, PF 구조화, 투자심의와 사후관리를 연결하는 기관용 대체투자 워크벤치입니다." /><meta property="og:title" content="서울 호텔 기관투자 워크벤치" /><meta property="og:image" content="/og.png" /><link rel="stylesheet" href="/assets/site.css" />`;
-fs.writeFileSync(path.join(client, "index.html"), `<!doctype html><html lang="ko"><head>${head}<title>서울 호텔 기관투자 워크벤치</title></head><body><div id="root"><main class="access-error"><p>기관용 워크벤치를 준비하고 있습니다…</p></main></div><script type="module" src="/assets/bootstrap.js"></script></body></html>`);
+const head = `<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="서울 4·5성급 호텔의 자산·투자·입지·상권 정보를 지도에서 탐색합니다." /><meta property="og:title" content="서울 호텔 투자 인텔리전스" /><meta property="og:image" content="/og.png" /><link rel="stylesheet" href="/assets/site.css" />`;
+fs.writeFileSync(path.join(client, "index.html"), `<!doctype html><html lang="ko"><head>${head}<title>서울 호텔 투자 인텔리전스</title></head><body><div id="root"><main class="access-error"><p>서울 호텔 자산 지도를 준비하고 있습니다…</p></main></div><script type="module" src="/assets/bootstrap.js"></script></body></html>`);
+fs.writeFileSync(path.join(client, "workbench.html"), `<!doctype html><html lang="ko"><head>${head}<meta name="robots" content="noindex,nofollow" /><title>제작자 전용 · 기관용 워크벤치</title></head><body><div id="root"><main class="access-error"><p>제작자 권한을 확인하고 있습니다…</p></main></div><script type="module" src="/assets/bootstrap.js"></script></body></html>`);
 fs.writeFileSync(path.join(client, "login.html"), `<!doctype html><html lang="ko"><head>${head}<title>회원 로그인 · 서울 호텔 투자 인텔리전스</title></head><body><main class="auth-shell"><section class="auth-intro"><small>Alternative Investment Research</small><div><h1>Seoul Hotel<br/>Capital Map</h1><p>서울 4·5성급 호텔의 자산·투자·입지·상권 데이터를 스터디 멤버와 안전하게 공유합니다.</p></div><strong>Created by lse_232</strong></section><section class="auth-panel"><div class="auth-card"><h2>멤버 접속</h2><p>사용자명과 비밀번호로 로그인하거나 새 계정을 만드세요.</p><div id="clerk-auth"></div></div></section></main><script type="module" src="/assets/auth.js"></script></body></html>`);
 const protectedAppPath = path.join(assets, "app.js");
+const protectedWorkbenchPath = path.join(assets, "workbench.js");
 const protectedAppSource = fs.readFileSync(protectedAppPath, "utf8");
+const protectedWorkbenchSource = fs.readFileSync(protectedWorkbenchPath, "utf8");
 const workerTemplate = fs.readFileSync(path.join(root, "static", "secure-worker.mjs"), "utf8");
 const serializedApp = JSON.stringify(protectedAppSource).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-const workerSource = workerTemplate.replace('const PROTECTED_APP_SOURCE = "";', () => `const PROTECTED_APP_SOURCE = ${serializedApp};`);
+const serializedWorkbench = JSON.stringify(protectedWorkbenchSource).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+const workerSource = workerTemplate
+  .replace('const PROTECTED_APP_SOURCE = "";', () => `const PROTECTED_APP_SOURCE = ${serializedApp};`)
+  .replace('const PROTECTED_WORKBENCH_SOURCE = "";', () => `const PROTECTED_WORKBENCH_SOURCE = ${serializedWorkbench};`);
 fs.writeFileSync(path.join(server, "index.js"), workerSource);
 fs.unlinkSync(protectedAppPath);
+fs.unlinkSync(protectedWorkbenchPath);
 
 console.log("Authenticated site built: public login + protected hotel bundle + D1 audit worker");
