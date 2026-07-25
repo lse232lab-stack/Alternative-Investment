@@ -2,6 +2,14 @@
 
 Public-source alternative investment underwriting and financial-modeling project.
 
+## Seoul Hotel Investment Intelligence
+
+The repository also includes a web-based research platform for 82 four- and
+five-star hotel assets in Seoul under [`hotel-research-site/`](hotel-research-site/README.md).
+It connects hotel asset profiles with building-register records, public lodging
+transactions, Seoul population data, and related OpenDART filings while keeping
+confirmed facts, calculated metrics, and outstanding diligence items distinct.
+
 This project is designed as a portfolio-grade learning tool for alternative investment and real asset advisory roles. It does not ask an LLM to "make a model." Core calculations are deterministic Python functions. AI tools are used only as coding, structuring, and memo-support assistants.
 
 ## Project Goal
