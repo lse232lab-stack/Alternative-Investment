@@ -10,10 +10,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "서울 호텔 투자 인텔리전스",
-    description: "서울 4·5성급 호텔 82개 자산의 위치, 객실, 거래사례와 투자 검토 포인트를 한 화면에서 탐색합니다.",
+    description: "서울 4·5성급 호텔 전수 자산의 위치, 객실, 거래사례와 투자 검토 포인트를 한 화면에서 탐색합니다.",
     openGraph: {
       title: "서울 호텔 투자 인텔리전스",
-      description: "서울 4·5성급 82개 자산을 지도와 투자 카드로 탐색합니다.",
+      description: "서울 4·5성급 전수 자산을 지도와 투자 카드로 탐색합니다.",
       images: [{ url: image, width: 1200, height: 630 }],
     },
   };

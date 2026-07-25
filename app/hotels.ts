@@ -1,8 +1,8 @@
 export type Hotel = {
-  id: string; name: string; officialName: string; grade: number; gradeDate: string; rooms: number; officialRooms: number; address: string; district: string; zone: string; brand: string; lat: number; lng: number; coordinateConfidence: string; owner: string; assetType: string; dd: string; transaction: null | { amount: number; year: number; buyer: string; theme: string; confidence: string; dd: string; perKey: number };
+  id: string; name: string; officialName: string; grade: number; gradeDate: string; rooms: number; officialRooms: number; address: string; district: string; zone: string; brand: string; lat: number; lng: number; coordinateConfidence: string; owner: string; assetType: string; dd: string; homepage?: string; officialRatingId?: number; transaction: null | { amount: number; year: number; buyer: string; theme: string; confidence: string; dd: string; perKey: number };
 };
 
-export const hotels: Hotel[] = [
+const hotelCatalogBase: Hotel[] = [
   {
     "id": "SEL-001",
     "name": "풀만 앰배서더 서울 이스트폴",
@@ -1691,4 +1691,62 @@ export const hotels: Hotel[] = [
     "assetType": "단독형",
     "dd": "등기·운영계약·최근 CAPEX·NOI 확보"
   }
+];
+
+const officialHotelAdditions: Hotel[] = [
+  {
+    id: "SEL-083", name: "그랜드 하얏트 서울", officialName: "서울미라마(유)그랜드하얏트서울", grade: 5,
+    gradeDate: "2026-07-15", rooms: 615, officialRooms: 615, address: "서울특별시 용산구 소월로 322",
+    district: "용산구", zone: "용산·이태원", brand: "Hyatt", lat: 37.5396014, lng: 126.9974521,
+    coordinateConfidence: "official", owner: "서울미라마(유)(등기 확인 필요)", assetType: "단독형",
+    dd: "HMA·소유권·대규모 부대시설 CAPEX·정상화 NOI 확인",
+    homepage: "https://www.hyatt.com/ko-KR/hotel/south-korea/grand-hyatt-seoul/selrs", officialRatingId: 354, transaction: null
+  },
+  {
+    id: "SEL-084", name: "임피리얼 팰리스 서울", officialName: "임피리얼 팰리스 호텔", grade: 5,
+    gradeDate: "2026-07-22", rooms: 405, officialRooms: 405, address: "서울특별시 강남구 언주로 640",
+    district: "강남구", zone: "GBD", brand: "독립·기타", lat: 37.5140589, lng: 127.0359563,
+    coordinateConfidence: "official", owner: "미확인(등기 확인 필요)", assetType: "단독형",
+    dd: "재개관 후 정상화 실적·리노베이션 CAPEX·소유권·운영구조 확인",
+    homepage: "http://imperialpalace.co.kr", officialRatingId: 367, transaction: null
+  },
+  {
+    id: "SEL-085", name: "르메르디앙 서울 명동", officialName: "르메르디앙 서울 명동", grade: 5,
+    gradeDate: "2026-07-02", rooms: 200, officialRooms: 200, address: "서울특별시 중구 명동8나길 38",
+    district: "중구", zone: "CBD", brand: "Marriott", lat: 37.5616351, lng: 126.9826974,
+    coordinateConfidence: "official", owner: "미확인(등기 확인 필요)", assetType: "복합자산",
+    dd: "복합개발 공용부·브랜드계약·상업시설 비용배분·정상화 NOI 확인",
+    homepage: "https://www.marriott.com/ko/hotels/selmm-le-meridien-seoul-myeongdong/overview/", officialRatingId: 1471, transaction: null
+  },
+  {
+    id: "SEL-086", name: "노보텔 앰배서더 서울 강남", officialName: "노보텔 앰배서더 강남 호텔", grade: 5,
+    gradeDate: "2026-07-03", rooms: 332, officialRooms: 332, address: "서울특별시 강남구 봉은사로 130",
+    district: "강남구", zone: "GBD", brand: "Accor·앰배서더", lat: 37.5053622, lng: 127.0290189,
+    coordinateConfidence: "official", owner: "미확인(등기 확인 필요)", assetType: "단독형",
+    dd: "브랜드·운영계약·객실 및 연회 CAPEX·법인수요 구성 확인",
+    homepage: "https://www.ambatel.com/novotel/gangnam/ko/main.do", officialRatingId: 364, transaction: null
+  },
+  {
+    id: "SEL-087", name: "엘리에나 호텔", officialName: "엘리에나호텔", grade: 4,
+    gradeDate: "2026-06-11", rooms: 63, officialRooms: 63, address: "서울특별시 강남구 논현로 645",
+    district: "강남구", zone: "GBD", brand: "독립·기타", lat: 37.5111132, lng: 127.0314126,
+    coordinateConfidence: "official", owner: "미확인(등기 확인 필요)", assetType: "단독형",
+    dd: "웨딩·연회 매출 의존도·객실 수익성·시설 CAPEX·소유권 확인",
+    homepage: "https://www.elienahotel.com", officialRatingId: 1473, transaction: null
+  },
+  {
+    id: "SEL-088", name: "신라스테이 광화문", officialName: "신라스테이 광화문", grade: 4,
+    gradeDate: "2026-07-06", rooms: 336, officialRooms: 336, address: "서울특별시 종로구 삼봉로 71",
+    district: "종로구", zone: "CBD", brand: "신라스테이", lat: 37.5726674, lng: 126.9811142,
+    coordinateConfidence: "official", owner: "미확인(등기 확인 필요)", assetType: "단독형",
+    dd: "임대차·운영구조·브랜드계약·광화문 법인수요와 주말수요 확인",
+    homepage: "https://www.shillastay.com/gwanghwamun/index.do", officialRatingId: 781, transaction: null
+  }
+];
+
+// 한국관광협회중앙회 호텔업 등급결정사업의 2026-07-25 유효등급 기준.
+const inactiveRatingIds = new Set(["SEL-075", "SEL-081"]);
+export const hotels: Hotel[] = [
+  ...hotelCatalogBase.filter((hotel) => !inactiveRatingIds.has(hotel.id)),
+  ...officialHotelAdditions,
 ];
