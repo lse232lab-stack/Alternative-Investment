@@ -152,7 +152,7 @@ export default function HotelExplorer() {
               <Metric label="등급 결정일" value={selected.gradeDate} />
             </div>
             <div className="detail-tabs">
-              {([['asset','자산'],['investment','투자'],['location','입지·상권'],['sources','출처']] as const).map(([key,label]) =>
+              {([['asset','자산'],['investment','투자·공시'],['location','입지·상권'],['sources','출처']] as const).map(([key,label]) =>
                 <button key={key} className={detailTab === key ? "active" : ""} onClick={() => setDetailTab(key)}>{label}</button>
               )}
             </div>
@@ -185,6 +185,25 @@ export default function HotelExplorer() {
                   <p>{selected.transaction.buyer}</p>
                 </div>
               ) : <div className="no-deal-box"><span>공개 거래 미확인</span><p>거래가를 임의 추정하지 않았습니다. 등기·펀드 공시·감정평가서 원문 확인이 필요합니다.</p></div>}
+              <div className="profile-block dd-coverage-block">
+                <div className="section-title"><span>투자 DD 데이터 커버리지</span><b>EVIDENCE</b></div>
+                <div className="dd-coverage-grid">{profile.ddCoverage.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong><b className={`coverage-status status-${item.status.replace(" ", "-")}`}>{item.status}</b></div>)}</div>
+              </div>
+              {profile.investmentMetrics.length > 0 && <div className="profile-block">
+                <div className="section-title"><span>{selected.district} 거래·수요 근거</span><b>PUBLIC DATA</b></div>
+                <div className="investment-evidence-grid">{profile.investmentMetrics.map((metric) => <div key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.note}</small></div>)}</div>
+                <p className="investment-data-note">{profile.investmentDataNote}</p>
+              </div>}
+              {profile.comparableDeals.length > 0 && <div className="profile-block">
+                <div className="section-title"><span>최근 권역 숙박시설 거래</span><b>RTMS</b></div>
+                <div className="comp-deal-list">{profile.comparableDeals.map((deal, index) => <div key={`${deal.date}-${deal.location}-${index}`}><span>{deal.date}</span><strong>{deal.location}</strong><b>{deal.amount}</b><small>{deal.area} · {deal.unitPrice}</small></div>)}</div>
+                <p className="subcopy">지번 일부가 비공개된 권역 비교사례입니다. 대상 호텔과 동일 자산 여부 및 일괄거래 범위는 공시·등기 원문으로 교차확인합니다.</p>
+              </div>}
+              {profile.disclosureEntities.length > 0 && <div className="profile-block">
+                <div className="section-title"><span>관련 법인 최근 공시</span><b>OPEN DART</b></div>
+                <div className="disclosure-list">{profile.disclosureEntities.map((entity) => <section key={entity.name}><div className="disclosure-entity"><strong>{entity.name}</strong><span>{entity.corpName}</span></div>{entity.filings.map((filing) => <a key={filing.receiptNo} href={`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${filing.receiptNo}`} target="_blank" rel="noreferrer"><span>{`${filing.date.slice(0,4)}.${filing.date.slice(4,6)}.${filing.date.slice(6,8)}`}</span><strong>{filing.reportName}</strong><b>↗</b></a>)}</section>)}</div>
+                <p className="subcopy">관련 법인의 공시 목록이며 해당 호텔에 직접 귀속되는 내용인지는 보고서 원문과 연결 주석을 확인해야 합니다.</p>
+              </div>}
               <div className="profile-block">
                 <div className="section-title"><span>소유·운영 구조</span><b>VERIFY</b></div>
                 <dl className="fact-list structure-facts">{profile.structureFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd><span className={`fact-status ${fact.status === "확인중" ? "pending" : ""}`}>{fact.status}</span></div>)}</dl>

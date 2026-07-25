@@ -1,8 +1,12 @@
 import type { Hotel } from "./hotels";
 import { buildingRegister } from "./buildingRegister";
+import { investmentDdData } from "./investmentData";
 
 export type SourceLink = { label: string; url: string; kind: "공식" | "공시·리서치" | "공공데이터" | "보조자료" };
 export type NearbyNode = { name: string; category: string; distanceKm: number };
+export type InvestmentMetric = { label: string; value: string; note: string };
+export type ComparableDeal = { date: string; location: string; amount: string; area: string; unitPrice: string };
+export type DisclosureEntity = { name: string; corpName: string; filings: { receiptNo: string; date: string; reportName: string; filerName: string }[] };
 export type HotelProfile = {
   officialUrl: string;
   opening: string;
@@ -19,6 +23,11 @@ export type HotelProfile = {
   buildingRegisterNote: string;
   assetMetrics: { label: string; value: string; note: string }[];
   structureFacts: { label: string; value: string; status: "확인" | "확인중" }[];
+  investmentMetrics: InvestmentMetric[];
+  comparableDeals: ComparableDeal[];
+  disclosureEntities: DisclosureEntity[];
+  ddCoverage: { label: string; value: string; status: "확인" | "산출" | "원문 필요" | "자료 요청" }[];
+  investmentDataNote: string;
   marketSignals: string[];
   verifiedCount: number;
   sources: SourceLink[];
@@ -232,6 +241,15 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
   if (physical) baseSources.push({ label: "OpenStreetMap 건물·호텔 보조정보", url: physical.osm, kind: "보조자료" });
   const ledger = buildingRegister[hotel.id as keyof typeof buildingRegister];
   if (ledger) baseSources.push({ label: `건축HUB 건축물대장 · ${ledger.ledgerScope}`, url: "https://www.data.go.kr/data/15134735/openapi.do", kind: "공공데이터" });
+  type RtmsDistrict = { count: number; medianAmountEok: number | null; medianPricePerSqmManwon: number | null; latestDeals: Array<{ year: number | null; month: number | null; day: number | null; neighborhood: string | null; jibunMasked: string | null; amountManwon: number | null; buildingArea: number | null }> };
+  type PopulationDistrict = { hourlyAverage: number; hourlyPeak: number; hourlyLow: number; observations: number };
+  type DartHotelEntity = { name: string; corpName: string; status: string; filings: Array<{ receiptNo: string; date: string; reportName: string; filerName: string }> };
+  const rtmsData = (investmentDdData.rtms.byDistrict as unknown as Record<string, RtmsDistrict>)[hotel.district];
+  const populationData = (investmentDdData.seoulPopulation.byDistrict as unknown as Record<string, PopulationDistrict>)[hotel.district];
+  const dartData = ((investmentDdData.dart.byHotel as unknown as Record<string, DartHotelEntity[]>)[hotel.id] ?? []).filter((entity) => entity.status === "matched");
+  if (rtmsData) baseSources.push({ label: `${hotel.district} 숙박시설 실거래가 · ${investmentDdData.rtms.period}`, url: "https://www.data.go.kr/data/15126463/openapi.do", kind: "공공데이터" });
+  if (populationData) baseSources.push({ label: `${hotel.district} 24시간 생활인구 · ${investmentDdData.seoulPopulation.date}`, url: "https://data.seoul.go.kr/dataList/OA-15439/A/1/datasetView.do", kind: "공공데이터" });
+  if (dartData.length) baseSources.push({ label: `관련 법인 DART 공시 · ${dartData.map((entity) => entity.name).join("·")}`, url: "https://dart.fss.or.kr/", kind: "공시·리서치" });
   if (["SEL-011", "SEL-030", "SEL-039", "SEL-047"].includes(hotel.id)) baseSources.push({ label: "서부T&D 서울드래곤시티 IR 자료", url: "https://kind.krx.co.kr/external/dst/irReference/17422/%EC%84%9C%EB%B6%80T%26D%20%ED%9A%8C%EC%82%AC%EC%86%8C%EA%B0%9C%EC%9E%90%EB%A3%8C_202508_v2.pdf", kind: "공시·리서치" });
   if (hotel.id === "SEL-037") baseSources.push({ label: "롯데리츠 사업보고서 · L7 강남", url: "https://kind.krx.co.kr/external/2026/03/03/001104/20260303003018/00591.htm", kind: "공시·리서치" });
   if (hotel.id === "SEL-049") baseSources.push({ label: "호텔신라 공시 · 서울호텔 리노베이션", url: "https://kind.krx.co.kr/external/2026/04/10/001082/20260410002474/10002.htm", kind: "공시·리서치" });
@@ -283,6 +301,35 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
         { label: "운영 브랜드", value: hotel.brand, status: "확인" as const },
         { label: "계약 형태", value: "직영·임차·HMA·프랜차이즈 구분 확인 중", status: "확인중" as const },
       ];
+  const investmentMetrics: InvestmentMetric[] = [
+    ...(rtmsData ? [
+      { label: "권역 숙박시설 거래", value: `${rtmsData.count.toLocaleString("ko-KR")}건`, note: `${investmentDdData.rtms.period} · ${hotel.district}` },
+      { label: "거래금액 중앙값", value: rtmsData.medianAmountEok == null ? "산정 불가" : `${rtmsData.medianAmountEok.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`, note: "공개 숙박용도 거래 · 자산규모 혼재" },
+      { label: "연면적당 중앙값", value: rtmsData.medianPricePerSqmManwon == null ? "산정 불가" : `${Math.round(rtmsData.medianPricePerSqmManwon).toLocaleString("ko-KR")}만원/㎡`, note: "건물면적 확인 거래 기준" },
+    ] : []),
+    ...(populationData ? [
+      { label: "생활인구 시간평균", value: `${Math.round(populationData.hourlyAverage).toLocaleString("ko-KR")}명`, note: `${investmentDdData.seoulPopulation.date} · 자치구 단위` },
+      { label: "생활인구 피크", value: `${Math.round(populationData.hourlyPeak).toLocaleString("ko-KR")}명`, note: "24시간 중 최대 관측치" },
+    ] : []),
+  ];
+  const comparableDeals: ComparableDeal[] = (rtmsData?.latestDeals ?? []).slice(0, 5).map((deal) => ({
+    date: [deal.year, deal.month, deal.day].filter((value) => value != null).map((value, index) => index === 0 ? String(value) : String(value).padStart(2, "0")).join("."),
+    location: `${deal.neighborhood ?? hotel.district} ${deal.jibunMasked ?? "지번 비공개"}`,
+    amount: deal.amountManwon == null ? "금액 미확인" : `${(deal.amountManwon / 10000).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`,
+    area: deal.buildingArea == null ? "면적 미확인" : `${deal.buildingArea.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}㎡`,
+    unitPrice: deal.amountManwon == null || deal.buildingArea == null ? "-" : `${Math.round(deal.amountManwon / deal.buildingArea).toLocaleString("ko-KR")}만원/㎡`,
+  }));
+  const disclosureEntities: DisclosureEntity[] = dartData.map((entity) => ({
+    name: entity.name, corpName: entity.corpName, filings: entity.filings.slice(0, 5),
+  }));
+  const ddCoverage = [
+    { label: "건축물대장", value: ledger ? `${ledger.ledgerScope} 연결` : "필지 재매칭", status: ledger ? "확인" as const : "원문 필요" as const },
+    { label: "DART 관련법인", value: disclosureEntities.length ? `${disclosureEntities.length}개 법인` : "공시 연결 없음", status: disclosureEntities.length ? "확인" as const : "원문 필요" as const },
+    { label: "권역 실거래", value: rtmsData ? `${rtmsData.count}건 산출` : "거래 미수집", status: rtmsData ? "산출" as const : "원문 필요" as const },
+    { label: "등기·담보권", value: "등기부 원문", status: "원문 필요" as const },
+    { label: "ADR·OCC·NOI", value: "운영자료", status: "자료 요청" as const },
+  ];
+  const investmentDataNote = `실거래가는 ${hotel.district} 내 주용도 '숙박' 공개거래를 집계한 비교자료이며 해당 호텔 거래를 의미하지 않습니다. 생활인구는 자치구 단위 24시간 관측치입니다. DART는 관련 법인의 공시 연결이며 소유권은 등기 원문으로 확정해야 합니다.`;
   const verifiedCount = physicalFacts.filter((fact) => fact.status !== "확인중").length + structureFacts.filter((fact) => fact.status === "확인").length + baseSources.length;
   return {
     officialUrl: url,
@@ -300,6 +347,11 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
     buildingRegisterNote,
     assetMetrics,
     structureFacts,
+    investmentMetrics,
+    comparableDeals,
+    disclosureEntities,
+    ddCoverage,
+    investmentDataNote,
     marketSignals: marketSignalsByZone[hotel.zone] ?? marketSignalsByZone.기타,
     verifiedCount,
     sources: baseSources,

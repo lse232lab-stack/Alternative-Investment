@@ -132,6 +132,24 @@ button { color: inherit; }
 .asset-metric-grid small { margin-top: 5px; color: #7a8581; font-size: 7px; line-height: 1.35; }
 .registry-note { margin-top: 12px !important; padding: 10px; background: #edf3ef; border-left: 3px solid var(--teal); }
 .registry-note.review { background: #f4ecdc; border-left-color: var(--gold); }
+.dd-coverage-block { background: #f0eee7; }
+.dd-coverage-grid { border-top: 1px solid #d7d2c5; }
+.dd-coverage-grid > div { min-height: 45px; display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; border-bottom: 1px solid #ded9ce; }
+.dd-coverage-grid span { color: var(--muted); font-size: 9px; }.dd-coverage-grid strong { font-size: 10px; }
+.coverage-status { padding: 4px 6px; font-size: 7px; white-space: nowrap; background: #dfece7; color: #17675d; }
+.coverage-status.status-산출 { background: #e4e8f1; color: #435d8a; }.coverage-status.status-원문-필요, .coverage-status.status-자료-요청 { background: #eee5d5; color: #8a641f; }
+.investment-evidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.investment-evidence-grid > div { min-height: 88px; padding: 11px 9px; background: #eef2ed; border-top: 2px solid var(--teal); }
+.investment-evidence-grid span, .investment-evidence-grid strong, .investment-evidence-grid small { display: block; }
+.investment-evidence-grid span { color: var(--muted); font-size: 8px; font-weight: 800; }.investment-evidence-grid strong { margin-top: 6px; font-family: Georgia, "Noto Serif KR", serif; font-size: 16px; }.investment-evidence-grid small { margin-top: 6px; color: #77827e; font-size: 7px; line-height: 1.4; }
+.investment-data-note { margin-top: 12px !important; padding: 10px; background: #f3eee2; border-left: 3px solid var(--gold); font-size: 9px !important; }
+.comp-deal-list { border-top: 1px solid #ddd8cc; }
+.comp-deal-list > div { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 7px; min-height: 54px; padding: 7px 0; border-bottom: 1px solid #e3ded3; }
+.comp-deal-list span { color: var(--muted); font-size: 8px; }.comp-deal-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }.comp-deal-list b { color: #7d5610; font-family: Georgia, serif; font-size: 11px; }.comp-deal-list small { grid-column: 2 / 4; color: #7a8581; font-size: 7px; }
+.disclosure-list { display: flex; flex-direction: column; gap: 12px; }
+.disclosure-list section { border: 1px solid #d8d4c8; background: white; }
+.disclosure-entity { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; background: #e9eee9; border-bottom: 1px solid #d8d4c8; }.disclosure-entity strong { font-size: 10px; }.disclosure-entity span { color: var(--muted); font-size: 8px; }
+.disclosure-list a { display: grid; grid-template-columns: 58px minmax(0, 1fr) 12px; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid #ece8df; color: var(--ink); text-decoration: none; }.disclosure-list a:last-child { border-bottom: 0; }.disclosure-list a span { color: var(--muted); font-size: 7px; }.disclosure-list a strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }.disclosure-list a b { color: var(--gold); }
 .dd-list { margin-top: 12px !important; padding-top: 11px !important; border-top: 1px solid #ddd8cc; }
 .distance-list { border-top: 1px solid #ddd8cc; }
 .distance-list div { display: grid; grid-template-columns: 86px minmax(0, 1fr) 55px; align-items: center; gap: 8px; min-height: 43px; border-bottom: 1px solid #e5e0d6; }
