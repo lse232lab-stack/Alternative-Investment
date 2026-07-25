@@ -42,7 +42,8 @@ fs.writeFileSync(path.join(client, "login.html"), `<!doctype html><html lang="ko
 const protectedAppPath = path.join(assets, "app.js");
 const protectedAppSource = fs.readFileSync(protectedAppPath, "utf8");
 const workerTemplate = fs.readFileSync(path.join(root, "static", "secure-worker.mjs"), "utf8");
-const workerSource = workerTemplate.replace('const PROTECTED_APP_SOURCE = "";', `const PROTECTED_APP_SOURCE = ${JSON.stringify(protectedAppSource)};`);
+const serializedApp = JSON.stringify(protectedAppSource).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+const workerSource = workerTemplate.replace('const PROTECTED_APP_SOURCE = "";', () => `const PROTECTED_APP_SOURCE = ${serializedApp};`);
 fs.writeFileSync(path.join(server, "index.js"), workerSource);
 fs.unlinkSync(protectedAppPath);
 
