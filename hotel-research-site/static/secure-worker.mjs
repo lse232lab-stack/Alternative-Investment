@@ -1,6 +1,7 @@
 // Static authenticated entrypoint used by the Sites production bundle.
 const encoder = new TextEncoder();
 const PROTECTED_APP_SOURCE = "";
+const PROTECTED_WORKBENCH_SOURCE = "";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -172,7 +173,8 @@ export default {
         return json({ users: result.results || [] });
       }
       if (url.pathname === "/api/deals" && request.method === "GET") {
-        await authenticate(request, env);
+        const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
         await ensureDatabase(env);
         if (!env.DB) return json({ deals: [] });
         const result = await env.DB.prepare("SELECT id, hotel_id AS hotelId, hotel_name AS hotelName, stage, model_json AS modelJson, owner_name AS ownerName, created_at AS createdAt, updated_at AS updatedAt FROM institutional_deals ORDER BY updated_at DESC LIMIT 200").all();
@@ -180,6 +182,7 @@ export default {
       }
       if (url.pathname === "/api/deals" && request.method === "POST") {
         const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
         await ensureDatabase(env);
         if (!env.DB) return json({ error: "저장소를 사용할 수 없습니다." }, 503);
         const payload = await readDealPayload(request);
@@ -192,11 +195,11 @@ export default {
       const dealMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)$/);
       if (dealMatch && request.method === "PUT") {
         const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
         await ensureDatabase(env);
         if (!env.DB) return json({ error: "저장소를 사용할 수 없습니다." }, 503);
         const existing = await env.DB.prepare("SELECT owner_user_id AS ownerUserId FROM institutional_deals WHERE id = ?").bind(dealMatch[1]).first();
         if (!existing) return json({ error: "딜을 찾을 수 없습니다." }, 404);
-        if (existing.ownerUserId !== user.id && !user.isAdmin) return json({ error: "작성자 또는 관리자만 수정할 수 있습니다." }, 403);
         const payload = await readDealPayload(request);
         const now = new Date().toISOString();
         await env.DB.prepare("UPDATE institutional_deals SET hotel_id = ?, hotel_name = ?, stage = ?, model_json = ?, updated_at = ? WHERE id = ?").bind(payload.hotelId, payload.hotelName, payload.stage, payload.modelJson, now, dealMatch[1]).run();
@@ -206,17 +209,20 @@ export default {
       }
       const documentsMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)\/documents$/);
       if (documentsMatch && request.method === "GET") {
-        await authenticate(request, env); await ensureDatabase(env);
+        const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
+        await ensureDatabase(env);
         if (!env.DB) return json({ documents: [] });
         const result = await env.DB.prepare("SELECT id, filename, content_type AS contentType, size_bytes AS sizeBytes, uploader_name AS uploaderName, created_at AS createdAt FROM deal_documents WHERE deal_id = ? ORDER BY created_at DESC").bind(documentsMatch[1]).all();
         return json({ documents: result.results || [] });
       }
       if (documentsMatch && request.method === "POST") {
-        const user = await authenticate(request, env); await ensureDatabase(env);
+        const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
+        await ensureDatabase(env);
         if (!env.DB || !env.FILES) return json({ error: "문서 저장소를 사용할 수 없습니다." }, 503);
         const deal = await env.DB.prepare("SELECT owner_user_id AS ownerUserId FROM institutional_deals WHERE id = ?").bind(documentsMatch[1]).first();
         if (!deal) return json({ error: "딜을 찾을 수 없습니다." }, 404);
-        if (deal.ownerUserId !== user.id && !user.isAdmin) return json({ error: "작성자 또는 관리자만 문서를 추가할 수 있습니다." }, 403);
         const form = await request.formData(); const file = form.get("file");
         if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") return json({ error: "업로드 파일이 필요합니다." }, 400);
         if (file.size > 10 * 1024 * 1024) return json({ error: "파일은 10MB 이하만 허용됩니다." }, 413);
@@ -228,7 +234,9 @@ export default {
       }
       const documentMatch = url.pathname.match(/^\/api\/deals\/([A-Za-z0-9-]+)\/documents\/([A-Za-z0-9-]+)$/);
       if (documentMatch && request.method === "GET") {
-        await authenticate(request, env); await ensureDatabase(env);
+        const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
+        await ensureDatabase(env);
         if (!env.DB || !env.FILES) return json({ error: "문서 저장소를 사용할 수 없습니다." }, 503);
         const document = await env.DB.prepare("SELECT filename, content_type AS contentType, r2_key AS r2Key FROM deal_documents WHERE id = ? AND deal_id = ?").bind(documentMatch[2], documentMatch[1]).first();
         if (!document) return json({ error: "문서를 찾을 수 없습니다." }, 404);
@@ -240,8 +248,14 @@ export default {
         await authenticate(request, env);
         return new Response(PROTECTED_APP_SOURCE, { headers: { "cache-control": "private, no-store", "content-type": "text/javascript; charset=utf-8" } });
       }
-      if (url.pathname === "/assets/app.js") return new Response("Not found", { status: 404 });
+      if (url.pathname === "/protected/workbench.js") {
+        const user = await authenticate(request, env);
+        if (!user.isAdmin) return json({ error: "제작자 전용 기능입니다." }, 403);
+        return new Response(PROTECTED_WORKBENCH_SOURCE, { headers: { "cache-control": "private, no-store", "content-type": "text/javascript; charset=utf-8" } });
+      }
+      if (url.pathname === "/assets/app.js" || url.pathname === "/assets/workbench.js") return new Response("Not found", { status: 404 });
       if (url.pathname === "/login" || url.pathname === "/sign-up") return serveAsset(env, request, "/login.html");
+      if (url.pathname === "/workbench" || url.pathname === "/workbench/") return serveAsset(env, request, "/workbench.html");
       const response = await env.ASSETS.fetch(request);
       if (response.status !== 404) return response;
       return serveAsset(env, request, "/index.html");

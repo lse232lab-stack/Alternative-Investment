@@ -20,9 +20,10 @@ async function api(path: string, token: string) {
 }
 
 function mountMemberBar(clerk: any, user: SessionUser, getToken: () => Promise<string | null>) {
+  const isWorkbench = location.pathname === "/workbench" || location.pathname === "/workbench/";
   const bar = document.createElement("aside");
   bar.className = "member-bar";
-  bar.innerHTML = `<span class="creator-mark">Created by lse_232</span><span class="member-name">${escapeHtml(user.displayName || user.username)}</span>${user.isAdmin ? '<button type="button" data-admin>이용자 내역</button>' : ""}<button type="button" data-signout>로그아웃</button>`;
+  bar.innerHTML = `<span class="creator-mark">Created by lse_232</span><span class="member-name">${escapeHtml(user.displayName || user.username)}</span>${user.isAdmin ? `<a href="${isWorkbench ? "/" : "/workbench"}">${isWorkbench ? "배포용 지도" : "내 워크벤치"}</a><button type="button" data-admin>이용자 내역</button>` : ""}<button type="button" data-signout>로그아웃</button>`;
   document.body.appendChild(bar);
   bar.querySelector("[data-signout]")?.addEventListener("click", async () => {
     await clerk.signOut();
@@ -61,13 +62,16 @@ async function start() {
   const token = await clerk.session.getToken();
   if (!token) throw new Error("세션 토큰을 확인할 수 없습니다.");
   const session = await api("/api/session", token);
-  const response = await fetch("/protected/app.js", { headers: { Authorization: `Bearer ${token}` } });
-  if (!response.ok) throw new Error("보호된 호텔 데이터를 불러오지 못했습니다.");
+  const isWorkbench = location.pathname === "/workbench" || location.pathname === "/workbench/";
+  if (isWorkbench && !session.user.isAdmin) throw new Error("기관용 워크벤치는 제작자 전용 페이지입니다.");
+  const response = await fetch(isWorkbench ? "/protected/workbench.js" : "/protected/app.js", { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new Error(isWorkbench ? "워크벤치 접근 권한을 확인할 수 없습니다." : "보호된 호텔 데이터를 불러오지 못했습니다.");
   const source = await response.text();
   const moduleUrl = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
   const app = await import(/* @vite-ignore */ moduleUrl);
   const getToken = () => clerk.session.getToken();
-  app.mountHotelApp({ getToken, user: session.user });
+  if (isWorkbench) app.mountWorkbench({ getToken, user: session.user });
+  else app.mountHotelApp({ getToken, user: session.user });
   mountMemberBar(clerk, session.user, getToken);
   URL.revokeObjectURL(moduleUrl);
 }

@@ -12,7 +12,7 @@ body { margin: 0; }
 .auth-card > p { color: #66736c; margin: 0 0 26px; }
 #clerk-auth { min-height: 420px; }
 .member-bar { position: fixed; z-index: 10000; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(22,34,29,.16); border-radius: 999px; background: rgba(255,255,255,.94); box-shadow: 0 8px 26px rgba(22,34,29,.12); backdrop-filter: blur(12px); font: 12px/1.2 Inter, sans-serif; }
-.member-bar button { border: 0; border-radius: 999px; padding: 7px 10px; background: #193c2e; color: white; cursor: pointer; }
+.member-bar button,.member-bar a { border: 0; border-radius: 999px; padding: 7px 10px; background: #193c2e; color: white; cursor: pointer; text-decoration:none; }
 .creator-mark { color: #7a642b; font-weight: 800; }
 .member-name { font-weight: 700; }
 .admin-modal { position: fixed; z-index: 20000; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(8,17,13,.68); }

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import HotelExplorer from "./HotelExplorer";
 import { hotels, type Hotel } from "./hotels";
 
 type SessionUser = { id: string; username: string; displayName: string; isAdmin: boolean };
@@ -87,7 +86,7 @@ function Metric({ label, value, tone = "" }: { label: string; value: string; ton
   return <div className={`uw-metric ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function InstitutionalWorkbench({ context }: { context: AppContext }) {
+export function InstitutionalWorkbench({ context }: { context: AppContext }) {
   const [selectedId, setSelectedId] = useState(hotels.find((h) => h.transaction)?.id || hotels[0].id);
   const selected = hotels.find((hotel) => hotel.id === selectedId) || hotels[0];
   const [model, setModel] = useState<Model>(() => defaultModel(selected));
@@ -223,9 +222,4 @@ function InstitutionalWorkbench({ context }: { context: AppContext }) {
       </main>
     </div>
   </div>;
-}
-
-export default function InstitutionalApp({ context }: { context: AppContext }) {
-  const [surface, setSurface] = useState<"map" | "workbench">("workbench");
-  return <><div className="product-switch"><button className={surface === "map" ? "active" : ""} onClick={() => setSurface("map")}>{hotels.length}개 자산 지도</button><button className={surface === "workbench" ? "active" : ""} onClick={() => setSurface("workbench")}>기관용 워크벤치</button></div>{surface === "map" ? <HotelExplorer /> : <InstitutionalWorkbench context={context}/>}</>;
 }
