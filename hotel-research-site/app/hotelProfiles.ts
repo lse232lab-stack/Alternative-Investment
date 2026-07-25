@@ -141,6 +141,12 @@ const opening: Record<string, [string, string]> = {
   "SEL-068": ["2005년", "호텔 공개자료"], "SEL-071": ["2023년 4월", "파르나스호텔 공시·리서치"],
   "SEL-079": ["2018년", "호텔 공개자료"], "SEL-080": ["2016년", "공개 건축정보(OSM)"],
   "SEL-082": ["2015년", "공개 건축정보(OSM)"],
+  "SEL-083": ["1978년 관광사업 등록", "호텔업 등급결정사업"],
+  "SEL-084": ["관광사업 등록자료 확인", "호텔업 등급결정사업"],
+  "SEL-085": ["2022년 관광사업 등록", "호텔업 등급결정사업"],
+  "SEL-086": ["1993년 관광사업 등록", "호텔업 등급결정사업"],
+  "SEL-087": ["2020년 관광사업 등록", "호텔업 등급결정사업"],
+  "SEL-088": ["2015년 관광사업 등록", "호텔업 등급결정사업"],
 };
 
 const renovation: Record<string, string> = {
@@ -202,6 +208,7 @@ function nearestNodes(hotel: Hotel): NearbyNode[] {
 }
 
 function officialUrl(hotel: Hotel) {
+  if (hotel.homepage) return hotel.homepage;
   const hit = officialByKeyword.find(([keyword]) => hotel.name.includes(keyword));
   if (hit) return hit[1];
   if (/롯데호텔|L7 |롯데시티/.test(hotel.name)) return "https://www.lottehotel.com/";
@@ -232,7 +239,7 @@ export function getHotelProfile(hotel: Hotel): HotelProfile {
   const url = officialUrl(hotel);
   const baseSources: SourceLink[] = [
     { label: "호텔 공식 홈페이지 · 객실/시설", url, kind: "공식" },
-    { label: "문화체육관광부 관광숙박업 등록·등급 데이터", url: "https://www.data.go.kr/", kind: "공공데이터" },
+    { label: "한국관광협회중앙회 호텔업 등급결정사업", url: "https://www.hotelrating.or.kr/hotel", kind: "공공데이터" },
   ];
   if (transactionSources[hotel.id]) baseSources.push({ label: "거래 보도·시장자료", url: transactionSources[hotel.id], kind: "공시·리서치" });
   if (["SEL-009", "SEL-053", "SEL-071"].includes(hotel.id)) baseSources.push({ label: "파르나스호텔 공개 리서치", url: "https://consensus.hankyung.com/analysis/downpdf?report_idx=648684", kind: "공시·리서치" });

@@ -49,7 +49,7 @@ export default function HotelExplorer() {
           </div>
         </div>
         <div className="header-meta">
-          <span className="status-dot" /> 데이터 기준 2026.07.24
+          <span className="status-dot" /> 등급 데이터 기준 2026.07.25
           <span className="header-rule" />
           <span>서울 4·5성급 전수</span>
         </div>

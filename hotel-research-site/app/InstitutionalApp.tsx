@@ -227,5 +227,5 @@ function InstitutionalWorkbench({ context }: { context: AppContext }) {
 
 export default function InstitutionalApp({ context }: { context: AppContext }) {
   const [surface, setSurface] = useState<"map" | "workbench">("workbench");
-  return <><div className="product-switch"><button className={surface === "map" ? "active" : ""} onClick={() => setSurface("map")}>82개 자산 지도</button><button className={surface === "workbench" ? "active" : ""} onClick={() => setSurface("workbench")}>기관용 워크벤치</button></div>{surface === "map" ? <HotelExplorer /> : <InstitutionalWorkbench context={context}/>}</>;
+  return <><div className="product-switch"><button className={surface === "map" ? "active" : ""} onClick={() => setSurface("map")}>{hotels.length}개 자산 지도</button><button className={surface === "workbench" ? "active" : ""} onClick={() => setSurface("workbench")}>기관용 워크벤치</button></div>{surface === "map" ? <HotelExplorer /> : <InstitutionalWorkbench context={context}/>}</>;
 }
