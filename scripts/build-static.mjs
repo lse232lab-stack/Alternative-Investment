@@ -39,6 +39,11 @@ fs.copyFileSync(path.join(root, "public", "og.png"), path.join(client, "og.png")
 const head = `<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="서울 4·5성급 호텔 82개 자산의 위치, 객실, 거래사례와 투자 검토 포인트를 탐색합니다." /><meta property="og:title" content="서울 호텔 투자 인텔리전스" /><meta property="og:image" content="/og.png" /><link rel="stylesheet" href="/assets/site.css" />`;
 fs.writeFileSync(path.join(client, "index.html"), `<!doctype html><html lang="ko"><head>${head}<title>서울 호텔 투자 인텔리전스</title></head><body><div id="root"><main class="access-error"><p>회원 정보를 확인하고 있습니다…</p></main></div><script type="module" src="/assets/bootstrap.js"></script></body></html>`);
 fs.writeFileSync(path.join(client, "login.html"), `<!doctype html><html lang="ko"><head>${head}<title>회원 로그인 · 서울 호텔 투자 인텔리전스</title></head><body><main class="auth-shell"><section class="auth-intro"><small>Alternative Investment Research</small><div><h1>Seoul Hotel<br/>Capital Map</h1><p>서울 4·5성급 호텔의 자산·투자·입지·상권 데이터를 스터디 멤버와 안전하게 공유합니다.</p></div><strong>Created by lse_232</strong></section><section class="auth-panel"><div class="auth-card"><h2>멤버 접속</h2><p>사용자명과 비밀번호로 로그인하거나 새 계정을 만드세요.</p><div id="clerk-auth"></div></div></section></main><script type="module" src="/assets/auth.js"></script></body></html>`);
-fs.copyFileSync(path.join(root, "static", "secure-worker.mjs"), path.join(server, "index.js"));
+const protectedAppPath = path.join(assets, "app.js");
+const protectedAppSource = fs.readFileSync(protectedAppPath, "utf8");
+const workerTemplate = fs.readFileSync(path.join(root, "static", "secure-worker.mjs"), "utf8");
+const workerSource = workerTemplate.replace('const PROTECTED_APP_SOURCE = "";', `const PROTECTED_APP_SOURCE = ${JSON.stringify(protectedAppSource)};`);
+fs.writeFileSync(path.join(server, "index.js"), workerSource);
+fs.unlinkSync(protectedAppPath);
 
 console.log("Authenticated site built: public login + protected hotel bundle + D1 audit worker");

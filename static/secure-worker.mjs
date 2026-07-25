@@ -1,5 +1,6 @@
 // Static authenticated entrypoint used by the Sites production bundle.
 const encoder = new TextEncoder();
+const PROTECTED_APP_SOURCE = "";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -111,11 +112,7 @@ export default {
       }
       if (url.pathname === "/protected/app.js") {
         await authenticate(request, env);
-        const response = await serveAsset(env, request, "/assets/app.js");
-        const headers = new Headers(response.headers);
-        headers.set("cache-control", "private, no-store");
-        headers.set("content-type", "text/javascript; charset=utf-8");
-        return new Response(response.body, { status: response.status, headers });
+        return new Response(PROTECTED_APP_SOURCE, { headers: { "cache-control": "private, no-store", "content-type": "text/javascript; charset=utf-8" } });
       }
       if (url.pathname === "/assets/app.js") return new Response("Not found", { status: 404 });
       if (url.pathname === "/login" || url.pathname === "/sign-up") return serveAsset(env, request, "/login.html");
